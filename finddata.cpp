@@ -193,12 +193,6 @@ mMysqlThread::~mMysqlThread()
 }
 void mMysqlThread::slot_reloadSqlConfig()
 {
-    for (auto it = SqlModel.begin(); it != SqlModel.end(); ++it) {
-        delete it.value().mModel;
-    }
-    SqlModel.clear();
-    Map_TableName.clear();
-
     if (myModel != nullptr) {
         delete myModel;
         myModel = nullptr;
@@ -215,9 +209,7 @@ void mMysqlThread::slot_reloadSqlConfig()
         }
     }
 
-    if (connectSQL()) {
-        InitSQL();
-    }
+    connectSQL();
 }
 
 //建立检测名称与数据表的映射关系

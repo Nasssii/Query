@@ -70,6 +70,8 @@ private:
     QString currentSqlModelName() const;
     bool canDeleteSqlTableMapping() const;
     void deleteSqlTableMapping(const QString &modelName);
+    void clearSqlTabsAndModels();
+    void reloadSqlRuntime();
     QList<QWidget*> m_dynamicSqlTabs;
     QMap<QWidget*, QString> m_dynamicSqlTabNames;
 

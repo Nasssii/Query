@@ -124,9 +124,56 @@ void MainWindow::slot_sqlConfigChanged(const SqlConnectionConfig &config)
 {
     Q_UNUSED(config)
     Read_Settings();
-    QMessageBox::information(this, "提示", "SQL 设置已保存，重启程序后生效。");
+    reloadSqlRuntime();
 }
 
+void MainWindow::clearSqlTabsAndModels()
+{
+    ui->tabWidget->blockSignals(true);
+    while (ui->tabWidget->count() > 0) {
+        QWidget *tab = ui->tabWidget->widget(0);
+        ui->tabWidget->removeTab(0);
+        delete tab;
+    }
+    ui->tabWidget->blockSignals(false);
+
+    m_dynamicSqlTabs.clear();
+    m_dynamicSqlTabNames.clear();
+    m_pageInfoMap.clear();
+
+    for (auto it = m_MysqlThread->SqlModel.begin(); it != m_MysqlThread->SqlModel.end(); ++it) {
+        delete it.value().mModel;
+    }
+    m_MysqlThread->SqlModel.clear();
+    m_MysqlThread->Map_TableName.clear();
+}
+
+void MainWindow::reloadSqlRuntime()
+{
+    if (m_MysqlThread == nullptr) {
+        return;
+    }
+
+    clearSqlTabsAndModels();
+
+    const bool invoked = QMetaObject::invokeMethod(m_MysqlThread, "slot_reloadSqlConfig", Qt::BlockingQueuedConnection);
+    if (!invoked || !m_MysqlThread->B_Connect) {
+        QMessageBox::warning(this, "错误", "数据库重新连接失败，请检查 SQL 设置。");
+        return;
+    }
+
+    m_MysqlThread->InitSQL();
+    slots_sql_model_conn();
+
+    for (int i = 0; i < ui->tabWidget->count(); ++i) {
+        PageInfo info;
+        info.currentPage = 1;
+        info.rowsPerPage = ui->allPage->value();
+        m_pageInfoMap[i] = info;
+    }
+    m_currentTabIndex = ui->tabWidget->currentIndex();
+    QMessageBox::information(this, "提示", "SQL 设置已保存并刷新。");
+}
 void MainWindow::setWordList(const QStringList &words) {
     fullWordList = words;
 }
@@ -187,16 +234,13 @@ void MainWindow::slots_sql_model_conn()
     ui->tabWidget->blockSignals(true);
     ui->tabWidget->tabBar()->setStyleSheet("QTabBar::tab { min-width: 96px; padding: 6px 24px 6px 12px; }");
 
-    for (QWidget *tab : m_dynamicSqlTabs) {
+    while (ui->tabWidget->count() > 0) {
+        QWidget *tab = ui->tabWidget->widget(0);
+        ui->tabWidget->removeTab(0);
         delete tab;
     }
     m_dynamicSqlTabs.clear();
     m_dynamicSqlTabNames.clear();
-
-    while (ui->tabWidget->count() > 0) {
-        ui->tabWidget->removeTab(0);
-    }
-
     for (auto it = m_MysqlThread->SqlModel.begin(); it != m_MysqlThread->SqlModel.end(); ++it) {
         if (it.value().mModel == nullptr) {
             continue;
