@@ -2,11 +2,14 @@
 #include "ui_mainwindow.h"
 #include <QScrollBar>
 #include <QStandardPaths>
+#include <QSignalBlocker>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QTabBar>
+#include <QHeaderView>
 #include <QTableView>
+#include <QSqlRecord>
 #include <QToolButton>
 #include "sqlsettingdialog.h"
 
@@ -34,21 +37,14 @@ MainWindow::MainWindow(QWidget *parent)
     m_MysqlThread = new mMysqlThread(this);
     m_MysqlThread->pThread->start();
 
-    // 记录当前标签页索引
+    // 记录当前标签页 key 和索引（PageInfo 由 slots_sql_model_conn 初始化）
     m_currentTabIndex = ui->tabWidget->currentIndex();
-
-    // 初始化所有标签页的分页信息（假设共有5个标签页）
-    for (int i = 0; i < ui->tabWidget->count(); ++i) {
-        PageInfo info;
-        info.currentPage = 1;
-        info.rowsPerPage = ui->allPage->value(); // 使用全局每页行数
-        m_pageInfoMap[i] = info;
-    }
+    m_currentTabKey = currentSqlModelName();
 
     // 启用页码控件（UI文件中默认为禁用）
     ui->CurPage->setEnabled(true);
-    // 可选：允许用户手动输入页码
-    ui->CurPage->setReadOnly(false);
+    ui->CurPage_2->setEnabled(true);
+    ui->CurPage->setReadOnly(true);
 //菜单绑定对应页面
 
     // 连接标签页切换信号
@@ -71,21 +67,17 @@ MainWindow::MainWindow(QWidget *parent)
     connect(this,&MainWindow::signals_Load_Data_show,m_MysqlThread,&mMysqlThread::slot_Load_Data_show);
 
     connect(this,&MainWindow::signals_get_flowernumber,m_MysqlThread,&mMysqlThread::slot_get_flowernumber,Qt::BlockingQueuedConnection);
-//    connect(m_MysqlThread, &mMysqlThread::signal_totalPages, this, &MainWindow::updatePageControls);//发送signal_totalPages信号去mainwindows的updatePageControls
+    connect(m_MysqlThread, &mMysqlThread::signal_totalPages, this, &MainWindow::updatePageControls);//发送signal_totalPages信号去mainwindows的updatePageControls
 //    connect(ui->CurPage, QOverload<int>::of(&QSpinBox::valueChanged), this, &MainWindow::on_Btn_Find_clicked);//页码改变自动触发
     //翻页按钮
-    connect(ui->Btn_PageUp, &QPushButton::clicked, this, &MainWindow::on_Btn_PageUp_clicked);
-    connect(ui->Btn_PageDown, &QPushButton::clicked, this, &MainWindow::on_Btn_PageDown_clicked);
     connect(this, &MainWindow::signals_requestExportData,m_MysqlThread, &mMysqlThread::slot_fetchDataForExport);  // 主线程请求子线程查询导出数据
     connect(m_MysqlThread, &mMysqlThread::signals_exportDataReady, this, &MainWindow::slot_writeExcel);           // 子线程数据就绪，由主线程写 Excel
     connect(ui->pushButton, &QPushButton::clicked, this, &MainWindow::on_pushButton_ExportAll_clicked);           //导出按钮响应，ExportAll_clicked
     //重置页数
-    connect(ui->allPage, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int newRows){
-    // 更新当前标签页的每页行数
-    m_pageInfoMap[m_currentTabIndex].rowsPerPage = newRows;
-    // 重置当前页为第一页
-    ui->CurPage->setValue(1);
-    on_Btn_Find_clicked();});
+    connect(ui->allPage, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int newColumns){
+    m_pageInfoMap[m_currentTabKey].columnsPerPage = qMax(1, newColumns);
+    resetCurrentPage();
+    loadDataForCurrentPage();});
 
 
 
@@ -102,6 +94,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui->dateEdit_End->setDateTime(QDateTime::currentDateTime());
     ui->dateEdit_Begin->setDate(QDateTime::currentDateTime().date().addDays(-7));
 
+    // 加载查询字段配置
+    m_queryFields = SQLConifg::loadQueryFields();
+
     //隐藏按钮控件
 //    ui->pushButton_2->setVisible(false);
 //    ui->pushButton_3->setVisible(false);
@@ -109,7 +104,19 @@ MainWindow::MainWindow(QWidget *parent)
 //    ui->pushButton_5->setVisible(false);
 //    ui->pushButton_6->setVisible(false);
  ui->USER->setVisible(false);
+ ui->Btn_PageDown->setVisible(true);
+  ui->Btn_PageUp->setVisible(true);
+  ui->CurPage->setVisible(true);
+  ui->CurPage_2->setVisible(true);
+  ui->label_4->setVisible(true);
 
+
+    // 在翻页控件 label_4 ("/") 后面添加"字段组"标签
+    QLabel *colGroupLabel = new QLabel("字段组", this);
+    int idx = ui->horizontalLayout_8->indexOf(ui->label_4);
+    if (idx >= 0) {
+        ui->horizontalLayout_8->insertWidget(idx + 1, colGroupLabel);
+    }
 }
 
 
@@ -124,6 +131,7 @@ void MainWindow::slot_sqlConfigChanged(const SqlConnectionConfig &config)
 {
     Q_UNUSED(config)
     Read_Settings();
+    m_queryFields = SQLConifg::loadQueryFields();
     reloadSqlRuntime();
 }
 
@@ -166,12 +174,22 @@ void MainWindow::reloadSqlRuntime()
     slots_sql_model_conn();
 
     for (int i = 0; i < ui->tabWidget->count(); ++i) {
+        QWidget *tabW = ui->tabWidget->widget(i);
+        QString tabKey = m_dynamicSqlTabNames.value(tabW);
+        if (tabKey.isEmpty()) continue;
         PageInfo info;
-        info.currentPage = 1;
-        info.rowsPerPage = ui->allPage->value();
-        m_pageInfoMap[i] = info;
+        info.columnPage = 1;
+        info.columnsPerPage = ui->allPage->value();
+        m_pageInfoMap[tabKey] = info;
     }
     m_currentTabIndex = ui->tabWidget->currentIndex();
+    m_currentTabKey = currentSqlModelName();
+    resetCurrentPage();
+    ui->CurPage->setMaximum(1);
+    ui->CurPage_2->setValue(1);
+    ui->Btn_PageUp->setEnabled(false);
+    ui->Btn_PageDown->setEnabled(false);
+    updateQueryFieldLabels();
     QMessageBox::information(this, "提示", "SQL 设置已保存并刷新。");
 }
 void MainWindow::setWordList(const QStringList &words) {
@@ -218,6 +236,10 @@ MainWindow::~MainWindow()
 void MainWindow::Database_Model_Binding(QTableView* TableView,QSqlTableModel* Model)
 {
     TableView->setModel(Model);
+    TableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    TableView->horizontalHeader()->setStretchLastSection(false);
+    TableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    TableView->horizontalHeader()->setMinimumSectionSize(60);
 }
 
 /**
@@ -232,7 +254,7 @@ void MainWindow::Database_Model_Binding(QTableView* TableView,QSqlTableModel* Mo
 void MainWindow::slots_sql_model_conn()
 {
     ui->tabWidget->blockSignals(true);
-    ui->tabWidget->tabBar()->setStyleSheet("QTabBar::tab { min-width: 96px; padding: 6px 24px 6px 12px; }");
+    ui->tabWidget->tabBar()->setStyleSheet("QTabBar::tab { min-width: 120px; padding: 8px 28px 8px 16px; }");
 
     while (ui->tabWidget->count() > 0) {
         QWidget *tab = ui->tabWidget->widget(0);
@@ -252,8 +274,23 @@ void MainWindow::slots_sql_model_conn()
         QTableView *tableView = new QTableView(tabPage);
         tableView->setAlternatingRowColors(true);
         tableView->setSortingEnabled(true);
+        tableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        tableView->horizontalHeader()->setStretchLastSection(false);
+        tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+        tableView->horizontalHeader()->setMinimumSectionSize(60);
         layout->addWidget(tableView);
         Database_Model_Binding(tableView, it.value().mModel);
+
+        // 模型重置（新查询数据到达）后测量列宽 + 恢复列隐藏状态
+        connect(it.value().mModel, &QSqlQueryModel::modelReset, this, [this, tableView]() {
+            if (m_pageInfoMap.contains(m_currentTabKey)) {
+                // 测量所有列的内容宽度并缓存
+                cacheColumnWidths(tableView);
+                // 计算列分页大小并应用
+                applyColumnPageToView(tableView,
+                    m_pageInfoMap[m_currentTabKey].columnPage, true);
+            }
+        });
 
         const QString tableName = it.key();
         const int tabIndex = ui->tabWidget->addTab(tabPage, tableName);
@@ -277,8 +314,33 @@ void MainWindow::slots_sql_model_conn()
         m_dynamicSqlTabNames.insert(tabPage, tableName);
     }
 
+    // 缓存每张表的列名（用于"无相关字段"判断）
+    m_cachedTableColumns.clear();
+    for (auto it = m_MysqlThread->SqlModel.begin(); it != m_MysqlThread->SqlModel.end(); ++it) {
+        QStringList cols;
+        QSqlRecord rec = it.value().mModel->record();
+        for (int i = 0; i < rec.count(); ++i) {
+            cols << rec.fieldName(i);
+        }
+        m_cachedTableColumns[it.value().Tab_Name] = cols;
+    }
+
+    // 初始化所有标签页的分页信息（用 tableName 做 key）
+    m_pageInfoMap.clear();
+    for (int i = 0; i < ui->tabWidget->count(); ++i) {
+        QWidget *tabW = ui->tabWidget->widget(i);
+        QString tabKey = m_dynamicSqlTabNames.value(tabW);
+        if (tabKey.isEmpty()) continue;
+        PageInfo info;
+        info.columnPage = 1;
+        info.columnsPerPage = ui->allPage->value();
+        m_pageInfoMap[tabKey] = info;
+    }
+
     ui->tabWidget->blockSignals(false);
     m_currentTabIndex = ui->tabWidget->currentIndex();
+    m_currentTabKey = currentSqlModelName();
+    updateQueryFieldLabels();
 }
 
 void MainWindow::Read_Settings()
@@ -316,6 +378,25 @@ void MainWindow::Read_Settings()
 
 void MainWindow::on_Btn_Find_clicked()
 {
+    if (m_pageInfoMap.contains(m_currentTabKey)) {
+        m_pageInfoMap[m_currentTabKey].dataLoaded = false;
+    }
+    resetCurrentPage();
+    loadDataForCurrentPage();
+}
+
+void MainWindow::resetCurrentPage()
+{
+    PageInfo &info = m_pageInfoMap[m_currentTabKey];
+    info.columnPage = 1;
+    info.columnsPerPage = ui->allPage->value();
+
+    QSignalBlocker blocker(ui->CurPage);
+    ui->CurPage->setValue(1);
+}
+
+void MainWindow::loadDataForCurrentPage()
+{
     {
         QMutexLocker locker(&m_exportMutex);
         if (m_bExporting) {
@@ -323,6 +404,9 @@ void MainWindow::on_Btn_Find_clicked()
             return;
         }
     }
+
+    PageInfo &pageInfo = m_pageInfoMap[m_currentTabKey];
+    pageInfo.columnsPerPage = ui->allPage->value();
 
     auto clearModel = [](QTableView* view) {
         if (view == nullptr) {
@@ -333,14 +417,14 @@ void MainWindow::on_Btn_Find_clicked()
             m->clear();
         }
     };
-    for (QTableView *view : ui->tabWidget->findChildren<QTableView*>()) {
-        clearModel(view);
-    }
+    clearModel(getCurrentTableView());
 
     auto emitCurrentModelQuery = [this](const QString &whereClause) {
         const QString modelName = currentSqlModelName();
         if (!modelName.isEmpty() && m_MysqlThread->SqlModel.contains(modelName)) {
-            emit signals_Load_Data_show(m_MysqlThread->SqlModel[modelName], whereClause, ui->allPage->value(), ui->allPage->value()*(ui->CurPage->value()-1));
+            int limit = ui->allPage->value();
+            int offset = 0;
+            emit signals_Load_Data_show(m_MysqlThread->SqlModel[modelName], whereClause, limit, offset);
         }
     };
     if (!ui->lineEdit_Name->text().isEmpty() || ui->comboBox_Result->currentText() != "" || ui->comboBox_Status->currentText() != "" || ui->ChB_date->isChecked()) {
@@ -427,11 +511,16 @@ void MainWindow::on_Btn_Find_clicked()
         }
         qDebug() << "Str:" << Str;
 
-        for (auto it = m_MysqlThread->SqlModel.begin(); it != m_MysqlThread->SqlModel.end(); ++it) {
-            emit signals_Load_Data_show(it.value(), " where " + Str, ui->allPage->value(), ui->allPage->value()*(ui->CurPage->value()-1));
+        const QString modelName = currentSqlModelName();
+        if (!modelName.isEmpty() && m_MysqlThread->SqlModel.contains(modelName)) {
+            int limit = ui->allPage->value();
+            int offset = 0;
+            emit signals_Load_Data_show(m_MysqlThread->SqlModel[modelName], " where " + Str, limit, offset);
         }
         qDebug() << "gogo";
     }
+    // 标记数据已加载（懒加载用）
+    m_pageInfoMap[m_currentTabKey].dataLoaded = true;
 }
 void MainWindow::on_tabWidget_currentChanged(int index)
 {
@@ -506,67 +595,294 @@ QString MainWindow::currentSqlModelName() const
 QTableView* MainWindow::getCurrentTableView()
 {
     return ui->tabWidget->currentWidget() ? ui->tabWidget->currentWidget()->findChild<QTableView*>() : nullptr;
-}void MainWindow::on_Btn_PageDown_clicked()
+}
+
+QStringList MainWindow::currentModelColumns(const QSqlQueryModel *model) const
 {
-    QTableView *currentView = getCurrentTableView();
-    if (currentView && currentView->horizontalScrollBar()) {
-        QScrollBar *hBar = currentView->horizontalScrollBar();
-        // 滚动步长 = 视口宽度
-        int step = hBar->pageStep() * 1 / 2;
-        hBar->setValue(hBar->value() + step);
+    QStringList columns;
+    if (model == nullptr) {
+        return columns;
     }
+
+    const int columnCount = model->columnCount();
+    columns.reserve(columnCount);
+    for (int i = 0; i < columnCount; ++i) {
+        columns << model->headerData(i, Qt::Horizontal).toString();
+    }
+    return columns;
+}
+
+void MainWindow::cacheColumnWidths(QTableView *view)
+{
+    if (!view) return;
+    auto *model = qobject_cast<QSqlQueryModel*>(view->model());
+    if (!model) return;
+    const int colCount = model->columnCount();
+    if (colCount <= 0) return;
+
+    QString tabKey = m_currentTabKey;
+    QVector<int> widths(colCount, 80);
+
+    // 临时显示所有列，用 ResizeToContents 测量内容宽度
+    QHeaderView *header = view->horizontalHeader();
+    QVector<bool> hiddenBackup(colCount);
+    for (int i = 0; i < colCount; ++i) {
+        hiddenBackup[i] = view->isColumnHidden(i);
+        view->setColumnHidden(i, false);
+    }
+
+    header->setSectionResizeMode(QHeaderView::ResizeToContents);
+    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+
+    for (int i = 0; i < colCount; ++i) {
+        widths[i] = qMax(60, header->sectionSize(i));
+    }
+
+    // 恢复隐藏状态和 Interactive 模式
+    header->setSectionResizeMode(QHeaderView::Interactive);
+    for (int i = 0; i < colCount; ++i) {
+        view->setColumnHidden(i, hiddenBackup[i]);
+    }
+
+    m_cachedColumnWidths[tabKey] = widths;
+}
+
+int MainWindow::columnPageSizeForView(const QTableView *view) const
+{
+    if (!view) return 10;
+    const int viewportWidth = view->viewport()->width();
+    if (viewportWidth <= 0) return 10;
+
+    QString tabKey = m_currentTabKey;
+    if (!m_cachedColumnWidths.contains(tabKey)) return 10;
+
+    const QVector<int> &widths = m_cachedColumnWidths[tabKey];
+    const int colCount = widths.size();
+    if (colCount <= 0) return 10;
+
+    int totalWidth = 0;
+    int colsThatFit = 0;
+    for (int i = 0; i < colCount; ++i) {
+        if (colsThatFit == 0 || totalWidth + widths[i] <= viewportWidth) {
+            totalWidth += widths[i];
+            ++colsThatFit;
+        } else {
+            break;
+        }
+    }
+
+    return qMax(1, colsThatFit);
+}
+
+void MainWindow::applyColumnPageToView(QTableView *view, int pageIndex, bool updateControls)
+{
+    if (view == nullptr) {
+        return;
+    }
+
+    auto *model = qobject_cast<QSqlQueryModel*>(view->model());
+    if (model == nullptr) {
+        return;
+    }
+
+    const int columnCount = model->columnCount();
+    if (columnCount <= 0) {
+        return;
+    }
+
+    PageInfo &info = m_pageInfoMap[m_currentTabKey];
+
+    // 如果还没有缓存宽度，先测量
+    if (!m_cachedColumnWidths.contains(m_currentTabKey)) {
+        cacheColumnWidths(view);
+    }
+
+    // 从缓存计算每页列数
+    const int pageSize = columnPageSizeForView(view);
+    info.columnPageSize = pageSize;
+
+    // 简单分页：不重叠，页面边界清晰
+    const int totalPages = qMax(1, (columnCount + pageSize - 1) / pageSize);
+    const int currentPage = qBound(1, pageIndex, totalPages);
+    const int startColumn = (currentPage - 1) * pageSize;
+    const int endColumn = qMin(startColumn + pageSize, columnCount);
+
+    view->setUpdatesEnabled(false);
+    view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+    // 先隐藏所有列，再显示当前页的列
+    for (int i = 0; i < columnCount; ++i) {
+        view->setColumnHidden(i, true);
+    }
+    for (int i = startColumn; i < endColumn; ++i) {
+        view->setColumnHidden(i, false);
+    }
+
+    // 获取缓存宽度
+    const QVector<int> &cachedWidths = m_cachedColumnWidths[m_currentTabKey];
+    int totalContentWidth = 0;
+    QVector<int> visibleIndices;
+    for (int i = startColumn; i < endColumn; ++i) {
+        if (i < cachedWidths.size()) {
+            totalContentWidth += cachedWidths[i];
+            visibleIndices.append(i);
+        }
+    }
+
+    const int viewportWidth = view->viewport()->width();
+
+    // 分配宽度：只拉伸不压缩（留白可接受）
+    if (totalContentWidth > 0 && viewportWidth > 0 && !visibleIndices.isEmpty()) {
+        if (totalContentWidth < viewportWidth) {
+            // 内容窄于视口 → 按比例拉伸填满
+            double ratio = (double)viewportWidth / totalContentWidth;
+            int allocated = 0;
+            for (int vi = 0; vi < visibleIndices.size(); ++vi) {
+                int col = visibleIndices[vi];
+                int w;
+                if (vi == visibleIndices.size() - 1) {
+                    w = viewportWidth - allocated;
+                } else {
+                    w = (int)(cachedWidths[col] * ratio);
+                    allocated += w;
+                }
+                view->horizontalHeader()->resizeSection(col, w);
+            }
+        } else {
+            // 内容≥视口 → 直接使用内容宽度，不压缩列宽，允许留白
+            for (int vi = 0; vi < visibleIndices.size(); ++vi) {
+                int col = visibleIndices[vi];
+                view->horizontalHeader()->resizeSection(col, cachedWidths[col]);
+            }
+        }
+    }
+
+    view->setUpdatesEnabled(true);
+    view->viewport()->update();
+
+    info.columnPage = currentPage;
+    info.totalColumnPages = totalPages;
+
+    if (updateControls) {
+        QSignalBlocker curBlocker(ui->CurPage);
+        ui->CurPage->setMaximum(totalPages);
+        ui->CurPage->setValue(currentPage);
+        ui->CurPage_2->setValue(totalPages);
+        ui->Btn_PageUp->setEnabled(currentPage > 1);
+        ui->Btn_PageDown->setEnabled(currentPage < totalPages);
+    }
+}
+
+void MainWindow::applyColumnPageToCurrentView()
+{
+    applyColumnPageToView(getCurrentTableView(), m_pageInfoMap.value(m_currentTabKey).columnPage, true);
+}
+
+void MainWindow::updateQueryFieldLabels()
+{
+    QString dbTableName;
+    if (m_MysqlThread && m_MysqlThread->SqlModel.contains(m_currentTabKey)) {
+        dbTableName = m_MysqlThread->SqlModel[m_currentTabKey].Tab_Name;
+    }
+
+    QStringList currentCols;
+    if (!dbTableName.isEmpty() && m_cachedTableColumns.contains(dbTableName)) {
+        currentCols = m_cachedTableColumns.value(dbTableName);
+    }
+
+    // 三个搜索字段对应的 label 和 lineEdit
+    QPair<QLabel*, QLineEdit*> fields[] = {
+        {ui->label_2, ui->lineEdit_ComCode},
+        {ui->label_3, ui->lineEdit_OnlineCode},
+        {ui->label_5, ui->lineEdit_SerialN}
+    };
+
+    for (int i = 0; i < m_queryFields.size() && i < 3; ++i) {
+        QLabel *label = fields[i].first;
+        QLineEdit *edit = fields[i].second;
+        const QueryFieldConfig &cfg = m_queryFields[i];
+
+        if (cfg.lookupTable.isEmpty()) {
+            // 直接查当前表 → 检查列是否存在
+            if (currentCols.contains(cfg.columnName)) {
+                label->setText(cfg.displayName + "：");
+                edit->setEnabled(true);
+                edit->setPlaceholderText("");
+            } else {
+                label->setText(cfg.displayName + "：(无相关字段)");
+                edit->setEnabled(false);
+                edit->setPlaceholderText("当前表无此字段");
+                edit->clear();
+            }
+        } else {
+            // 跨表查询 → 始终可用
+            label->setText(cfg.displayName + "：");
+            edit->setEnabled(true);
+            edit->setPlaceholderText("");
+        }
+    }
+}
+
+void MainWindow::on_Btn_PageDown_clicked()
+{
+    if (!m_pageInfoMap.contains(m_currentTabKey)) return;
+    PageInfo &info = m_pageInfoMap[m_currentTabKey];
+    if (info.columnPage >= info.totalColumnPages) return;
+
+    QTableView *view = getCurrentTableView();
+    if (!view) return;
+    applyColumnPageToView(view, info.columnPage + 1, true);
 }
 
 void MainWindow::on_Btn_PageUp_clicked()
 {
-    QTableView *currentView = getCurrentTableView();
-    if (currentView && currentView->horizontalScrollBar()) {
-        QScrollBar *hBar = currentView->horizontalScrollBar();
-        int step = hBar->pageStep() * 1 / 2;
-        hBar->setValue(hBar->value() - step);
-    }
+    if (!m_pageInfoMap.contains(m_currentTabKey)) return;
+    PageInfo &info = m_pageInfoMap[m_currentTabKey];
+    if (info.columnPage <= 1) return;
+
+    QTableView *view = getCurrentTableView();
+    if (!view) return;
+    applyColumnPageToView(view, info.columnPage - 1, true);
 }
 void MainWindow::onTabChanged(int index)
 {
-    // 1. 保存旧标签页的分页信息（从界面控件读取当前值）
-    PageInfo &oldInfo = m_pageInfoMap[m_currentTabIndex];
-    oldInfo.currentPage = ui->CurPage->value();
-    oldInfo.rowsPerPage = ui->allPage->value();
-    oldInfo.totalPages = ui->CurPage->maximum();   // 总页数保存在 CurPage �?maximum �?
+    if (index < 0) return;
 
-    // 2. 切换到新标签页
+    // 保存旧 tab 状态（columnsPerPage）
+    if (m_pageInfoMap.contains(m_currentTabKey)) {
+        PageInfo &oldInfo = m_pageInfoMap[m_currentTabKey];
+        oldInfo.columnsPerPage = ui->allPage->value();
+    }
+
     m_currentTabIndex = index;
-    PageInfo &newInfo = m_pageInfoMap[index];
+    m_currentTabKey = currentSqlModelName();
+    if (!m_pageInfoMap.contains(m_currentTabKey)) {
+        PageInfo info;
+        info.columnPage = 1;
+        info.columnsPerPage = ui->allPage->value();
+        m_pageInfoMap[m_currentTabKey] = info;
+    }
 
-    // 3. 恢复新标签页的分页控件状态
-    ui->CurPage->setValue(newInfo.currentPage);
-    ui->allPage->setValue(newInfo.rowsPerPage);
-    // 临时设置总页数为1，等查询结果返回后会�?updatePageControls 更新为真实�?
-    ui->CurPage->setMaximum(1);
-    ui->CurPage_2->setValue(1);
+    const PageInfo &newInfo = m_pageInfoMap[m_currentTabKey];
+    QSignalBlocker curPageBlocker(ui->CurPage);
+    QSignalBlocker allPageBlocker(ui->allPage);
+    ui->CurPage->setValue(1);
+    ui->allPage->setValue(newInfo.columnsPerPage);
+    ui->Btn_PageUp->setEnabled(false);
+    ui->Btn_PageDown->setEnabled(false);
 
-    // 4. 触发查询，刷新数据
-    on_Btn_Find_clicked();
+    // 懒加载：dataLoaded 则只恢复列显示，不查库
+    if (newInfo.dataLoaded) {
+        applyColumnPageToCurrentView();
+        updateQueryFieldLabels();
+        return;
+    }
+    loadDataForCurrentPage();
 }
 //映射标签页信息到�?
-void MainWindow::updatePageControls(int totalPages, int currentPage)
+void MainWindow::updatePageControls(int totalRows, int limit)
 {
-    // 保存当前标签页的分页信息
-    PageInfo &info = m_pageInfoMap[m_currentTabIndex];
-    info.totalPages = totalPages;
-    info.currentPage = currentPage;
-    info.rowsPerPage = ui->allPage->value();   // 同步每页行数
-
-    // 更新界面控件
-    ui->CurPage->setMaximum(totalPages);
-    if (ui->CurPage->value() != currentPage) {
-        ui->CurPage->setValue(currentPage);
-    }
-    ui->CurPage_2->setValue(totalPages);
-
-    // 控制翻页按钮启用状态
-    ui->Btn_PageUp->setEnabled(currentPage > 1);
-    ui->Btn_PageDown->setEnabled(currentPage < totalPages);
+    applyColumnPageToCurrentView();
 }
 QString MainWindow::buildWhereClause()
 {

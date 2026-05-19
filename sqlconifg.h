@@ -3,6 +3,7 @@
 
 #include <QList>
 #include <QString>
+#include <QStringList>
 
 struct SqlTableConfig
 {
@@ -24,6 +25,13 @@ struct SqlConnectionConfig
     QList<SqlTableConfig> tables;
 };
 
+struct QueryFieldConfig
+{
+    QString displayName;      // 显示名称，如 "零部件条码"
+    QString columnName;       // 数据库列名，如 "流水号"
+    QString lookupTable;      // 关联查询表（空 = 在当前表直接查）
+};
+
 class SQLConifg
 {
 public:
@@ -37,6 +45,11 @@ public:
 
     // 将 SQLSettingDialog 收集到的设置写回 ini。
     static bool saveConfig(const SqlConnectionConfig &config);
+
+    // 查询字段配置
+    static QList<QueryFieldConfig> loadQueryFields();
+    static bool saveQueryFields(const QList<QueryFieldConfig> &fields);
+    static QList<QueryFieldConfig> defaultQueryFields();
 };
 
 #endif // SQLCONIFG_H

@@ -114,7 +114,7 @@ public slots:
     void slot_load_columns(QString tablename);//加载列名
     void slot_reloadSqlConfig();//重新加载数据库连接和模型
 
-    void slot_Load_Data_show(Model_ba mModelBa,QString str,int now_rows,int now_CurPage);
+    void slot_Load_Data_show(Model_ba mModelBa,QString str,int limit,int offset);
     QStringList slot_get_flowernumber(QString tablename,QString str);
     int getTotalRecordCount(const QString &tableName, const QString &whereClause);//获取表单数据总数
     QStringList getTableColumns(const QString& tableName);//获取表列名
@@ -124,7 +124,7 @@ signals:
     void signals_setmodel(QSqlTableModel *mModel);
     void signals_sql_model_conn();
     void sign_setWordList(const QStringList &words);//设置信号
-    void signal_totalPages(int totalPages, int currentPage);//总页数与当前页
+    void signal_totalPages(int totalRows, int limit);//总行数与每页行数
     void signals_exportDataReady(QList<TableData> allData);//携带所有表的数据准备完毕
     void signals_exportProgress(int currentTable, int totalTables, int currentBatch, int totalBatches, QString sheetName);//导出进度
 };

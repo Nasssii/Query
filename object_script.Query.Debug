@@ -1,0 +1,11 @@
+debug/finddata.o
+debug/formsqlset.o
+debug/main.o
+debug/mainwindow.o
+debug/sqlconifg.o
+debug/sqlsettingdialog.o
+debug/qrc_Resource.o
+debug/moc_finddata.o
+debug/moc_formsqlset.o
+debug/moc_mainwindow.o
+debug/moc_sqlsettingdialog.o

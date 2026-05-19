@@ -6,48 +6,207 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>546</width>
-    <height>578</height>
+    <width>1444</width>
+    <height>791</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>151</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>SQL设置</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">/* ================================
+   QLabel 透明底优化
+   放在 QSS 文件最后
+   ================================ */
+
+/* 所有 QLabel 默认透明 */
+QLabel {
+    background-color: transparent;
+    border: none;
+}
+
+/* 左侧字段标签：host / PORT / 数据库名 / 用户名 / 密码 */
+QLabel#hostlabel,
+QLabel#portlabel,
+QLabel#linkSQLlabel,
+QLabel#SQLUserNamelabel,
+QLabel#SQLPASSWORDlabel,
+QLabel#LInkNamelabel {
+    background-color: transparent;
+    color: #526274;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    padding: 0px;
+}
+
+/* 三个分区标题：数据库连接 / 设置表 / 查询配置 */
+QLabel#labelSQLLink,
+QLabel#labelSetTable,
+QLabel#labelSelSet {
+    background-color: transparent;
+    color: #2563EB;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    padding: 0px 0px 8px 0px;
+}
+
+/* 顶部大标题 SQL设置 */
+QLabel#label {
+    background-color: transparent;
+    color: #0F172A;
+    font-size: 24px;
+    font-weight: 700;
+    border: none;
+    padding: 12px 8px 8px 14px;
+}</string>
   </property>
   <widget class="QWidget" name="verticalLayoutWidget">
    <property name="geometry">
     <rect>
      <x>30</x>
      <y>10</y>
-     <width>481</width>
-     <height>491</height>
+     <width>861</width>
+     <height>544</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QLabel" name="label">
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="font">
-       <font>
-        <family>Algerian</family>
-        <pointsize>18</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>SQL设置</string>
-      </property>
-     </widget>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <spacer name="horizontalSpacer_3">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_2">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>46</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <family>Algerian</family>
+          <pointsize>24</pointsize>
+          <weight>50</weight>
+          <bold>false</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>SQL设置</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_4">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
     </item>
     <item>
      <layout class="QGridLayout" name="gridLayout_2">
-      <item row="0" column="0">
+      <item row="1" column="1">
+       <spacer name="verticalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="1" column="0">
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
          <layout class="QGridLayout" name="gridLayout">
+          <item row="10" column="2">
+           <widget class="QTableWidget" name="tableWidgetSelSet">
+            <property name="selectionMode">
+             <enum>QAbstractItemView::SingleSelection</enum>
+            </property>
+            <property name="selectionBehavior">
+             <enum>QAbstractItemView::SelectRows</enum>
+            </property>
+            <property name="rowCount">
+             <number>3</number>
+            </property>
+            <property name="columnCount">
+             <number>3</number>
+            </property>
+            <attribute name="horizontalHeaderVisible">
+             <bool>true</bool>
+            </attribute>
+            <attribute name="verticalHeaderVisible">
+             <bool>false</bool>
+            </attribute>
+            <row/>
+            <row/>
+            <row/>
+            <column>
+             <property name="text">
+              <string>显示名称</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>数据库列名</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>关联查询表</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+          <item row="9" column="2">
+           <widget class="QLabel" name="labelSelSet">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>查询条件配置</string>
+            </property>
+           </widget>
+          </item>
           <item row="8" column="2">
            <spacer name="verticalSpacer">
             <property name="orientation">
@@ -61,158 +220,154 @@
             </property>
            </spacer>
           </item>
-          <item row="0" column="2">
-           <widget class="QLabel" name="labelSQLLink">
-            <property name="maximumSize">
-             <size>
-              <width>120</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="font">
-             <font>
-              <family>AcadEref</family>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>数据库连接</string>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="0">
-           <widget class="QLabel" name="SQLUserNamelabel">
-            <property name="maximumSize">
-             <size>
-              <width>80</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>用户名</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="0">
-           <widget class="QLabel" name="SQLPASSWORDlabel">
-            <property name="maximumSize">
-             <size>
-              <width>80</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>密码</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="2">
-           <widget class="QLineEdit" name="linkSQL"/>
-          </item>
-          <item row="7" column="2">
-           <widget class="QLineEdit" name="SQLPASSWORD"/>
-          </item>
-          <item row="6" column="2">
-           <widget class="QLineEdit" name="SQLUser"/>
-          </item>
-          <item row="1" column="2">
-           <widget class="QLineEdit" name="LInkName"/>
-          </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="linkSQLlabel">
-            <property name="maximumSize">
-             <size>
-              <width>80</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>数据库名</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="portlabel">
-            <property name="maximumSize">
-             <size>
-              <width>80</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>PORT</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="LInkNamelabel">
-            <property name="maximumSize">
-             <size>
-              <width>80</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>连接名</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="2">
-           <widget class="QLineEdit" name="port"/>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="hostlabel">
-            <property name="maximumSize">
-             <size>
-              <width>80</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>host</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="2">
-           <widget class="QLineEdit" name="host"/>
+          <item row="5" column="2">
+           <layout class="QGridLayout" name="gridLayout_5">
+            <item row="2" column="0">
+             <widget class="QLabel" name="LInkNamelabel">
+              <property name="maximumSize">
+               <size>
+                <width>80</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>连接名</string>
+              </property>
+             </widget>
+            </item>
+            <item row="8" column="0">
+             <widget class="QLabel" name="SQLPASSWORDlabel">
+              <property name="maximumSize">
+               <size>
+                <width>80</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>密码</string>
+              </property>
+             </widget>
+            </item>
+            <item row="8" column="1">
+             <widget class="QLineEdit" name="SQLPASSWORD"/>
+            </item>
+            <item row="7" column="1">
+             <widget class="QLineEdit" name="SQLUser"/>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="portlabel">
+              <property name="maximumSize">
+               <size>
+                <width>80</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>PORT</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="1">
+             <widget class="QLineEdit" name="linkSQL"/>
+            </item>
+            <item row="7" column="0">
+             <widget class="QLabel" name="SQLUserNamelabel">
+              <property name="maximumSize">
+               <size>
+                <width>80</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>用户名</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLineEdit" name="LInkName"/>
+            </item>
+            <item row="4" column="1">
+             <widget class="QLineEdit" name="host"/>
+            </item>
+            <item row="6" column="0">
+             <widget class="QLabel" name="linkSQLlabel">
+              <property name="maximumSize">
+               <size>
+                <width>80</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>数据库名</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QLineEdit" name="port"/>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="hostlabel">
+              <property name="maximumSize">
+               <size>
+                <width>80</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>host</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="labelSQLLink">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>数据库连接</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
          </layout>
         </item>
        </layout>
       </item>
-      <item row="0" column="1">
-       <spacer name="verticalSpacer_2">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>40</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="0" column="2">
+      <item row="1" column="2">
        <layout class="QGridLayout" name="gridLayout_3">
-        <item row="0" column="0">
-         <widget class="QLabel" name="labelSetTable">
-          <property name="maximumSize">
+        <item row="2" column="1">
+         <spacer name="verticalSpacer_3">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
            <size>
-            <width>130</width>
-            <height>20</height>
+            <width>20</width>
+            <height>40</height>
            </size>
           </property>
-          <property name="font">
-           <font>
-            <family>AcadEref</family>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>        设置表</string>
-          </property>
-         </widget>
+         </spacer>
+        </item>
+        <item row="2" column="2">
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="1" column="1">
+           <spacer name="verticalSpacer_4">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
         </item>
         <item row="2" column="0">
          <widget class="QTableWidget" name="SQLTableSetitng">
@@ -246,6 +401,25 @@
           </column>
          </widget>
         </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="labelSetTable">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>设置表</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
      </layout>
@@ -268,10 +442,10 @@
   <widget class="QPushButton" name="pushButton">
    <property name="geometry">
     <rect>
-     <x>400</x>
-     <y>530</y>
-     <width>93</width>
-     <height>28</height>
+     <x>470</x>
+     <y>570</y>
+     <width>96</width>
+     <height>34</height>
     </rect>
    </property>
    <property name="text">
@@ -281,10 +455,10 @@
   <widget class="QPushButton" name="pushButton_2">
    <property name="geometry">
     <rect>
-     <x>290</x>
-     <y>530</y>
-     <width>93</width>
-     <height>28</height>
+     <x>360</x>
+     <y>570</y>
+     <width>98</width>
+     <height>36</height>
     </rect>
    </property>
    <property name="text">

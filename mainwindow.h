@@ -30,7 +30,7 @@ private slots:
     void on_Btn_Find_clicked();
 
     void on_tabWidget_currentChanged(int index);
-    void updatePageControls(int totalPages, int currentPage);
+    void updatePageControls(int totalRows, int limit);
     //下一页按钮事�?
     void on_Btn_PageUp_clicked();
     void on_Btn_PageDown_clicked();
@@ -52,6 +52,11 @@ private:
     Ui::MainWindow *ui;
     void Database_Model_Binding(QTableView *TableView,QSqlTableModel* Model);
     void handleTextChange(const QString &text);
+    void applyColumnPageToCurrentView();
+    void applyColumnPageToView(QTableView *view, int pageIndex, bool updateControls);
+    int columnPageSizeForView(const QTableView *view) const;
+    QStringList currentModelColumns(const QSqlQueryModel *model) const;
+    void cacheColumnWidths(QTableView *view);
 
     QStringListModel *list_model;
     QStringList fullWordList;
@@ -60,18 +65,27 @@ private:
     QString getLastChineseChar(const QString &input);
     //
     struct PageInfo {
-        int currentPage = 1;
-        int rowsPerPage = 50;
-        int totalPages = 1;
+        int columnPage = 1;          // 当前第几组字段
+        int columnPageSize = 10;     // 字段组大小（来自 allPage 控件）
+        int totalColumnPages = 1;    // 总共几组字段
+        int columnsPerPage = 50;     // 用户设定的每页字段数
+        bool dataLoaded = false;     // 是否已从数据库加载过数据
     };
-    QMap<int, PageInfo> m_pageInfoMap;   // 标签页索�?-> 分页信息
-    int m_currentTabIndex;                // 当前标签页索�?
+    QMap<QString, PageInfo> m_pageInfoMap;   // 表名 -> 分页信息
+    QList<QueryFieldConfig> m_queryFields;   // 查询字段配置
+    QMap<QString, QStringList> m_cachedTableColumns; // 表名 -> 列名缓存
+    QString m_currentTabKey;                 // 当前 Tab 的表名 key
+    int m_currentTabIndex = 0;               // 当前 Tab 的索引（用于 Name_result/Name_date 等）
+    QMap<QString, QVector<int>> m_cachedColumnWidths;  // 表名 -> 每列内容宽度缓存
     QTableView* getCurrentTableView();
     QString currentSqlModelName() const;
     bool canDeleteSqlTableMapping() const;
     void deleteSqlTableMapping(const QString &modelName);
     void clearSqlTabsAndModels();
     void reloadSqlRuntime();
+    void loadDataForCurrentPage();
+    void resetCurrentPage();
+    void updateQueryFieldLabels();
     QList<QWidget*> m_dynamicSqlTabs;
     QMap<QWidget*, QString> m_dynamicSqlTabNames;
 
@@ -86,7 +100,7 @@ private:
     void finalizeExport(bool success, const QString &message);
 
 signals:
-    void signals_Load_Data_show(Model_ba mModelBa,QString str,int now_rows,int now_CurPage);
+    void signals_Load_Data_show(Model_ba mModelBa,QString str,int limit,int offset);
     QStringList signals_get_flowernumber(QString tablename,QString str);
   // void signals_export_all_data(QString sql);   //导出信号
     void signals_requestExportData(QString whereClause); // 请求子线程查询数�?

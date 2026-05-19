@@ -23,6 +23,7 @@ signals:
 
 private slots:
     void onItemChanged(QTableWidgetItem *item);
+    void onSelSetItemChanged(QTableWidgetItem *item);
     void deleteSelectedRow();
     void onConfirmClicked();
     void onCancelClicked();

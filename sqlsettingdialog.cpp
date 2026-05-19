@@ -7,6 +7,7 @@
 #include <QRegExp>
 #include <QShortcut>
 #include <QTableWidget>
+#include "sqlconifg.h"
 
 SQLSettingDialog::SQLSettingDialog(QWidget *parent) :
     QDialog(parent),
@@ -29,6 +30,14 @@ SQLSettingDialog::SQLSettingDialog(QWidget *parent) :
 
       ui->LInkNamelabel->setVisible(false);
       ui->LInkName->setVisible(false);
+
+    // 设置查询条件配置表
+    QTableWidget *selSetTable = ui->tableWidgetSelSet;
+    selSetTable->setColumnCount(3);
+    selSetTable->setHorizontalHeaderLabels(
+        QStringList() << tr("显示名称") << tr("数据库列名") << tr("关联查询表"));
+    connect(selSetTable, &QTableWidget::itemChanged, this, &SQLSettingDialog::onSelSetItemChanged);
+
     loadConfigToUi();
     ensureOneEmptyRow();
 }
@@ -93,6 +102,12 @@ void SQLSettingDialog::onItemChanged(QTableWidgetItem *item)
     table->blockSignals(false);
 }
 
+void SQLSettingDialog::onSelSetItemChanged(QTableWidgetItem *item)
+{
+    if (item == nullptr) return;
+    // 不校验内容，允许任意字符（显示名和列名可能是中文/英文/空）
+}
+
 void SQLSettingDialog::deleteSelectedRow()
 {
     QTableWidget *table = ui->SQLTableSetitng;
@@ -128,6 +143,20 @@ void SQLSettingDialog::loadConfigToUi()
         table->setItem(row, 1, new QTableWidgetItem(tableConfig.tableName));
     }
     table->blockSignals(false);
+
+    // 加载查询字段配置
+    QList<QueryFieldConfig> queryFields = SQLConifg::loadQueryFields();
+    QTableWidget *selSet = ui->tableWidgetSelSet;
+    selSet->blockSignals(true);
+    selSet->setRowCount(0);
+    for (const QueryFieldConfig &qf : queryFields) {
+        const int row = selSet->rowCount();
+        selSet->insertRow(row);
+        selSet->setItem(row, 0, new QTableWidgetItem(qf.displayName));
+        selSet->setItem(row, 1, new QTableWidgetItem(qf.columnName));
+        selSet->setItem(row, 2, new QTableWidgetItem(qf.lookupTable));
+    }
+    selSet->blockSignals(false);
 }
 
 bool SQLSettingDialog::collectConfigFromUi(SqlConnectionConfig *config)
@@ -216,6 +245,28 @@ void SQLSettingDialog::onConfirmClicked()
     if (!SQLConifg::saveConfig(config)) {
         QMessageBox::warning(this, tr("保存失败"), tr("写入 Data/Settings.ini 失败。"));
         return;
+    }
+
+    // 收集并保存查询字段配置
+    QList<QueryFieldConfig> queryFields;
+    QTableWidget *selSet = ui->tableWidgetSelSet;
+    for (int i = 0; i < selSet->rowCount(); ++i) {
+        QTableWidgetItem *nameItem  = selSet->item(i, 0);
+        QTableWidgetItem *colItem   = selSet->item(i, 1);
+        QTableWidgetItem *lookItem  = selSet->item(i, 2);
+        QString displayName = nameItem  ? nameItem->text().trimmed() : QString();
+        QString columnName  = colItem   ? colItem->text().trimmed()  : QString();
+        QString lookupTable = lookItem  ? lookItem->text().trimmed() : QString();
+        if (!displayName.isEmpty()) {
+            QueryFieldConfig qf;
+            qf.displayName = displayName;
+            qf.columnName  = columnName;
+            qf.lookupTable = lookupTable;
+            queryFields.append(qf);
+        }
+    }
+    if (!queryFields.isEmpty()) {
+        SQLConifg::saveQueryFields(queryFields);
     }
 
     emit configChanged(config);

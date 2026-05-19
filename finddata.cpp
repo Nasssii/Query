@@ -471,31 +471,28 @@ void mMysqlThread::slot_Load_Data(QString Tab_Name, QString str, int now_rows, i
     slot_Load_Data_show(SqlModel[modelKey], str, now_rows, now_CurPage);
 }
 
-void mMysqlThread::slot_Load_Data_show(Model_ba mModelBa, QString str, int rowsPerPage, int offset)
+void mMysqlThread::slot_Load_Data_show(Model_ba mModelBa, QString str, int limit, int offset)
 {
-        if (mModelBa.Tab_Name.trimmed().isEmpty() || mModelBa.mModel == nullptr) {
-        qDebug() << "跳过查询：表名为空或模型为空，where:" << str;
+    if (mModelBa.Tab_Name.trimmed().isEmpty() || mModelBa.mModel == nullptr) {
         return;
     }
-// 1. 获取总记录数
-    int total = getTotalRecordCount(mModelBa.Tab_Name, str);
-    int totalPages = (total + rowsPerPage - 1) / rowsPerPage; // 向上取整
 
-    // 2. 修正 offset 不要越界
-    if (offset >= total && total > 0) {
-        offset = (totalPages - 1) * rowsPerPage;
+    // 使用 SQL_CALC_FOUND_ROWS 一次查询同时获取数据+总行数，避免两次全表扫描
+    QString selectStr = QString("SELECT SQL_CALC_FOUND_ROWS * FROM %1 %2 LIMIT %3 OFFSET %4")
+                            .arg(mModelBa.Tab_Name, str)
+                            .arg(limit).arg(offset);
+    mModelBa.mModel->QSqlQueryModel::setQuery(selectStr);
+
+    // 立即获取 FOUND_ROWS() 得到总行数（必须在同一连接上执行）
+    int totalRows = 0;
+    QSqlQuery foundQuery;
+    if (foundQuery.exec("SELECT FOUND_ROWS()") && foundQuery.next()) {
+        totalRows = foundQuery.value(0).toInt();
     }
 
-    // 3. 发送总页数信号（更新页码控件）
-    int currentPage = offset / rowsPerPage + 1;
-    emit signal_totalPages(totalPages, currentPage);
-
-    // 4. 执行带分页的查询
-    QString selectStr = QString("SELECT * FROM %1 %2 LIMIT %3 OFFSET %4")
-                            .arg(mModelBa.Tab_Name, str, QString::number(rowsPerPage), QString::number(offset));
-    mModelBa.mModel->QSqlQueryModel::setQuery(selectStr);
+    // 回传总行数和 limit，主线程计算页数并更新 UI
+    emit signal_totalPages(totalRows, limit);
 }
-
 
 QStringList mMysqlThread::slot_get_flowernumber(QString tablename,QString str)
 {

@@ -87,3 +87,57 @@ bool SQLConifg::saveConfig(const SqlConnectionConfig &config)
 
     return settings.status() == QSettings::NoError;
 }
+
+QList<QueryFieldConfig> SQLConifg::defaultQueryFields()
+{
+    QList<QueryFieldConfig> defaults;
+    defaults.append({"零部件条码",   "",                "datas_linecode_a1"});
+    defaults.append({"上线条码",     "上线码",          "rfid_to_uplinecode"});
+    defaults.append({"流水号",       "流水号",          ""});
+    return defaults;
+}
+
+QList<QueryFieldConfig> SQLConifg::loadQueryFields()
+{
+    QSettings settings(settingsPath(), QSettings::IniFormat);
+
+    const int size = settings.beginReadArray("QueryFields");
+    if (size <= 0) {
+        settings.endArray();
+        return defaultQueryFields();
+    }
+
+    QList<QueryFieldConfig> fields;
+    for (int i = 0; i < size; ++i) {
+        settings.setArrayIndex(i);
+        QueryFieldConfig f;
+        f.displayName = settings.value("displayName").toString();
+        f.columnName  = settings.value("columnName").toString();
+        f.lookupTable = settings.value("lookupTable").toString();
+        if (!f.displayName.trimmed().isEmpty()) {
+            fields.append(f);
+        }
+    }
+    settings.endArray();
+
+    if (fields.isEmpty()) return defaultQueryFields();
+    return fields;
+}
+
+bool SQLConifg::saveQueryFields(const QList<QueryFieldConfig> &fields)
+{
+    QSettings settings(settingsPath(), QSettings::IniFormat);
+
+    settings.remove("QueryFields");
+    settings.beginWriteArray("QueryFields");
+    for (int i = 0; i < fields.size(); ++i) {
+        settings.setArrayIndex(i);
+        settings.setValue("displayName", fields.at(i).displayName);
+        settings.setValue("columnName",  fields.at(i).columnName);
+        settings.setValue("lookupTable", fields.at(i).lookupTable);
+    }
+    settings.endArray();
+    settings.sync();
+
+    return settings.status() == QSettings::NoError;
+}
