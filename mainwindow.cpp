@@ -281,18 +281,20 @@ void MainWindow::slots_sql_model_conn()
         layout->addWidget(tableView);
         Database_Model_Binding(tableView, it.value().mModel);
 
-        // 模型重置（新查询数据到达）后测量列宽 + 恢复列隐藏状态
-        connect(it.value().mModel, &QSqlQueryModel::modelReset, this, [this, tableView]() {
-            if (m_pageInfoMap.contains(m_currentTabKey)) {
-                // 测量所有列的内容宽度并缓存
-                cacheColumnWidths(tableView);
-                // 计算列分页大小并应用
-                applyColumnPageToView(tableView,
-                    m_pageInfoMap[m_currentTabKey].columnPage, true);
+        // 模型重置（新查询数据到达）后标记加载完成 + 测量列宽 + 恢复列隐藏状态
+        const QString tableName = it.key();
+        connect(it.value().mModel, &QSqlQueryModel::modelReset, this, [this, tableView, tableName]() {
+            if (m_pageInfoMap.contains(tableName)) {
+                PageInfo &info = m_pageInfoMap[tableName];
+                info.dataLoaded = true;
+                info.dataLoading = false;
+                if (tableName == m_currentTabKey) {
+                    cacheColumnWidths(tableView);
+                    applyColumnPageToView(tableView, info.columnPage, true);
+                }
             }
         });
 
-        const QString tableName = it.key();
         const int tabIndex = ui->tabWidget->addTab(tabPage, tableName);
         if (canDeleteSqlTableMapping()) {
             QToolButton *closeButton = new QToolButton(ui->tabWidget);
@@ -381,6 +383,7 @@ void MainWindow::on_Btn_Find_clicked()
     if (m_pageInfoMap.contains(m_currentTabKey)) {
         m_pageInfoMap[m_currentTabKey].dataLoaded = false;
     }
+    m_cachedColumnWidths.remove(m_currentTabKey);
     resetCurrentPage();
     loadDataForCurrentPage();
 }
@@ -406,6 +409,9 @@ void MainWindow::loadDataForCurrentPage()
     }
 
     PageInfo &pageInfo = m_pageInfoMap[m_currentTabKey];
+    pageInfo.dataLoaded = false;
+    pageInfo.dataLoading = true;
+    m_cachedColumnWidths.remove(m_currentTabKey);
     pageInfo.columnsPerPage = ui->allPage->value();
 
     auto clearModel = [](QTableView* view) {
@@ -519,8 +525,6 @@ void MainWindow::loadDataForCurrentPage()
         }
         qDebug() << "gogo";
     }
-    // 标记数据已加载（懒加载用）
-    m_pageInfoMap[m_currentTabKey].dataLoaded = true;
 }
 void MainWindow::on_tabWidget_currentChanged(int index)
 {
@@ -871,12 +875,20 @@ void MainWindow::onTabChanged(int index)
     ui->Btn_PageUp->setEnabled(false);
     ui->Btn_PageDown->setEnabled(false);
 
-    // 懒加载：dataLoaded 则只恢复列显示，不查库
+    // 懒加载逻辑
     if (newInfo.dataLoaded) {
+        // 数据已缓存 → 直接恢复列显示，不查库
         applyColumnPageToCurrentView();
         updateQueryFieldLabels();
         return;
     }
+
+    if (newInfo.dataLoading) {
+        // 数据正在加载中 → 等待 modelReset 自动更新 UI
+        return;
+    }
+
+    // 数据从未加载过 → 触发查询
     loadDataForCurrentPage();
 }
 //映射标签页信息到�?

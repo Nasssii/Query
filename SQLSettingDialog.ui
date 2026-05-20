@@ -154,47 +154,7 @@ QLabel#label {
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
          <layout class="QGridLayout" name="gridLayout">
-          <item row="10" column="2">
-           <widget class="QTableWidget" name="tableWidgetSelSet">
-            <property name="selectionMode">
-             <enum>QAbstractItemView::SingleSelection</enum>
-            </property>
-            <property name="selectionBehavior">
-             <enum>QAbstractItemView::SelectRows</enum>
-            </property>
-            <property name="rowCount">
-             <number>3</number>
-            </property>
-            <property name="columnCount">
-             <number>3</number>
-            </property>
-            <attribute name="horizontalHeaderVisible">
-             <bool>true</bool>
-            </attribute>
-            <attribute name="verticalHeaderVisible">
-             <bool>false</bool>
-            </attribute>
-            <row/>
-            <row/>
-            <row/>
-            <column>
-             <property name="text">
-              <string>显示名称</string>
-             </property>
-            </column>
-            <column>
-             <property name="text">
-              <string>数据库列名</string>
-             </property>
-            </column>
-            <column>
-             <property name="text">
-              <string>关联查询表</string>
-             </property>
-            </column>
-           </widget>
-          </item>
-          <item row="9" column="2">
+          <item row="9" column="1">
            <widget class="QLabel" name="labelSelSet">
             <property name="minimumSize">
              <size>
@@ -207,7 +167,7 @@ QLabel#label {
             </property>
            </widget>
           </item>
-          <item row="8" column="2">
+          <item row="8" column="1">
            <spacer name="verticalSpacer">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -220,7 +180,7 @@ QLabel#label {
             </property>
            </spacer>
           </item>
-          <item row="5" column="2">
+          <item row="5" column="1">
            <layout class="QGridLayout" name="gridLayout_5">
             <item row="2" column="0">
              <widget class="QLabel" name="LInkNamelabel">
@@ -330,6 +290,76 @@ QLabel#label {
                <string>数据库连接</string>
               </property>
              </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="10" column="1">
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <item>
+             <spacer name="horizontalSpacer_2">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QTableWidget" name="tableWidgetSelSet">
+              <property name="selectionMode">
+               <enum>QAbstractItemView::SingleSelection</enum>
+              </property>
+              <property name="selectionBehavior">
+               <enum>QAbstractItemView::SelectRows</enum>
+              </property>
+              <property name="rowCount">
+               <number>3</number>
+              </property>
+              <property name="columnCount">
+               <number>3</number>
+              </property>
+              <attribute name="horizontalHeaderVisible">
+               <bool>true</bool>
+              </attribute>
+              <attribute name="verticalHeaderVisible">
+               <bool>false</bool>
+              </attribute>
+              <row/>
+              <row/>
+              <row/>
+              <column>
+               <property name="text">
+                <string>显示名称</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>数据库列名</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>关联查询表</string>
+               </property>
+              </column>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_5">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
             </item>
            </layout>
           </item>

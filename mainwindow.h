@@ -70,6 +70,7 @@ private:
         int totalColumnPages = 1;    // 总共几组字段
         int columnsPerPage = 50;     // 用户设定的每页字段数
         bool dataLoaded = false;     // 是否已从数据库加载过数据
+        bool dataLoading = false;    // 是否正在加载中
     };
     QMap<QString, PageInfo> m_pageInfoMap;   // 表名 -> 分页信息
     QList<QueryFieldConfig> m_queryFields;   // 查询字段配置
