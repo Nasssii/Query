@@ -23,8 +23,6 @@ SqlConnectionConfig SQLConifg::loadConfig()
     SqlConnectionConfig config;
     QSettings settings(settingsPath(), QSettings::IniFormat);
 
-    // 连接信息兼容原有 [Settings] 分组，避免影响 MainWindow::Read_Settings()。
-    config.connectionName = settings.value("SqlSetting/connectionName").toString();
     config.hostName = settings.value("Settings/hostname").toString();
     config.databaseName = settings.value("Settings/databaseName").toString();
     config.userName = settings.value("Settings/userName").toString();
@@ -66,8 +64,6 @@ bool SQLConifg::saveConfig(const SqlConnectionConfig &config)
 {
     QSettings settings(settingsPath(), QSettings::IniFormat);
 
-    // 连接信息仍写入原 [Settings]，保证现有数据库连接读取逻辑可继续工作。
-    settings.setValue("SqlSetting/connectionName", config.connectionName);
     settings.setValue("Settings/hostname", config.hostName);
     settings.setValue("Settings/databaseName", config.databaseName);
     settings.setValue("Settings/userName", config.userName);

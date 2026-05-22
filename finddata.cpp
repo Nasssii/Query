@@ -231,32 +231,18 @@ void mMysqlThread::InitSQL()
             }
         }
 
-        if (Map_TableName.isEmpty()) {
-            // 标签页0 - 主线
-            Map_TableName.insert("主线", "datas_linecode_a1");
-            // 标签页1 - 辅线（一个分表）
-            Map_TableName.insert("辅线", "datas_linecode_b1");
-            // 标签页2 - 检漏检测（
-            Map_TableName.insert("检漏检测", "datas_linecode_jl");
-            // 标签页3 - 风速检测（两个表）
-            Map_TableName.insert("风速检测1", "datas_linecode_f");
-            Map_TableName.insert("风速检测2", "datas_linecode_f1");
-            // 标签页4 - 性能检测
-            Map_TableName.insert("性能检测", "datas_linecode_d");
+        // 自动探测每张表的结果字段和日期字段
+        m_resultFieldMap.clear();
+        m_dateFieldMap.clear();
+        for (auto it = Map_TableName.begin(); it != Map_TableName.end(); ++it) {
+            const QStringList cols = getTableColumns(it.value());
+            for (const QString &col : cols) {
+                if (col.contains("结果"))
+                    m_resultFieldMap[it.key()] = col;
+                if (col.contains("日期"))
+                    m_dateFieldMap[it.key()] = col;
+            }
         }
-        // 结果字段名列表（
-        Name_result.clear();
-        Name_date.clear();
-        Name_result << "结果"               // 主线 (索引0)
-                    << "视觉影像总结果"     // 辅线 (索引1)
-                    << "视觉影像总结果"     // 检漏检测 (索引2)
-                    << "风速总结果"         // 风速检测 (索引3，两个表共用)
-                    << "电检总结果";        // 性能检测 (索引4)
-        Name_date << "数据更新日期"
-                  << "日期"
-                  << "日期"
-                  << "日期"
-                  << "日期";
 
         // 创建 QSqlTableModel
         Model_ba buff_Model_ba;
@@ -649,152 +635,22 @@ int mMysqlThread::getTotalRecordCount(const QString &tableName, const QString &w
 return 0;
 }
 
-// 分批导出全部数据到Excel
+// 分批导出全部数据到Excel（已废弃，改为新路径：slot_fetchDataForExport + slot_writeExcel）
 void mMysqlThread::slot_exportAllBatched(QString whereClause)
 {
-       qDebug() << "[Export] 开始导出，where:" << whereClause;
-    QString desktopPath = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
-    QDir dir(desktopPath + "/ExportData");
-    if (!dir.exists()) dir.mkpath(".");
+    Q_UNUSED(whereClause)
+    qDebug() << "[Export] slot_exportAllBatched 已废弃，请使用新导出路径。";
+}
 
-    QString dateTime = QDateTime::currentDateTime().toString("yyyyMMddhhmmss");
-    QString filePath = QString("%1/ExportData/Export_%2.xlsm").arg(desktopPath).arg(dateTime);
-    qDebug() << "[Export] 文件路径:" << filePath;
-
-    // 2. 创建 Excel 对象（可能卡死 1）
-    qDebug() << "[Export] 正在创建 Excel.Application...";
-    QAxObject* excel = new QAxObject("Excel.Application", this);
-    if (excel->isNull()) {
-        qDebug() << "[Export] 创建 Excel 对象失败！可能未安装 Excel 或 COM 未注册";
-        QMessageBox::warning(nullptr, "错误", "无法创建 Excel 对象。");
-        delete excel;
-        emit signals_exportProgress(-1, 0, 0, 0, "");
-        return;
+// 验证登录
+QPair<int, QString> mMysqlThread::slot_checkLogin(const QString &user, const QString &pwd)
+{
+    QSqlQuery query(db);
+    query.prepare("SELECT 权限, 权限等级 FROM admin WHERE 用户名=? AND 员工密码=?");
+    query.addBindValue(user);
+    query.addBindValue(pwd);
+    if (query.exec() && query.next()) {
+        return {query.value(1).toInt(), query.value(0).toString()};
     }
-    qDebug() << "[Export] Excel 对象创建成功";
-    excel->setProperty("DisplayAlerts", false);
-    qDebug() << "[Export] 设置 DisplayAlerts 完成";
-
-    QAxObject* workbooks = excel->querySubObject("Workbooks");
-
-    if (!workbooks || workbooks->isNull()) {
-         qDebug() << "[Export] 获取 Workbooks 失败";
-         excel->dynamicCall("Quit()");
-         delete excel;
-         emit signals_exportProgress(-1, 0, 0, 0, "获取 Workbooks 失败");
-         return;
-     }
-     qDebug() << "[Export] 获取 Workbooks 成功";
-
-
-    QAxObject* workbook = workbooks->querySubObject("Add");
-      //debug代码
-      if (!workbook || workbook->isNull()) {
-          qDebug() << "[Export] 新建工作簿失败";
-          workbooks->dynamicCall("Close()");
-          excel->dynamicCall("Quit()");
-          delete workbooks;
-          delete excel;
-          emit signals_exportProgress(-1, 0, 0, 0, "新建工作簿");
-          return;
-      }
-      qDebug() << "[Export] 新建工作簿成功";
-
-    QAxObject* worksheets = workbook->querySubObject("Worksheets");
-    //正确检查 worksheets 是否有效
-    if (!worksheets || worksheets->isNull()) {
-        qDebug() << "[Export] 获取 Worksheets 失败";
-        workbooks->dynamicCall("Close()");
-        excel->dynamicCall("Quit()");
-        delete workbook;
-        delete workbooks;
-        delete excel;
-        emit signals_exportProgress(-1, 0, 0, 0, "Worksheets失败");
-        return;
-    }
-    qDebug() << "[Export] 新建工作簿成功";
-
-    int tableIndex = 0;
-    int totalTables = Map_TableName.size();
-
-    for (auto it = Map_TableName.begin(); it != Map_TableName.end(); ++it) {
-        QString sheetName = it.key();
-        QString tableName = it.value();
-        tableIndex++;
-
-        QStringList columns = getTableColumns(tableName);
-        if (columns.isEmpty()) continue;
-
-        QString countSql = QString("SELECT COUNT(*) FROM %1 %2").arg(tableName).arg(whereClause);
-        QSqlQuery countQuery(db);
-        int totalCount = 0;
-        if (countQuery.exec(countSql) && countQuery.next()) {
-            totalCount = countQuery.value(0).toInt();
-        }
-        if (totalCount == 0) continue;
-        if (totalCount > MAX_EXPORT_ROWS) totalCount = MAX_EXPORT_ROWS;
-
-        int totalBatches = (totalCount + BATCH_QUERY_ROWS - 1) / BATCH_QUERY_ROWS;
-
-        QAxObject* sheet = nullptr;
-        if (tableIndex == 1) {
-            sheet = worksheets->querySubObject("Item(int)", 1);
-        } else {
-            sheet = worksheets->querySubObject("Add()");
-        }
-        sheet->setProperty("Name", sheetName.left(31));
-
-        for (int col = 0; col < columns.size(); ++col) {
-            QAxObject* cell = sheet->querySubObject("Cells(int,int)", 1, col + 1);
-            cell->setProperty("Value", columns.at(col));
-            delete cell;
-        }
-
-        int currentRow = 2;
-
-        for (int batchIndex = 0; batchIndex < totalBatches; ++batchIndex) {
-            int offset = batchIndex * BATCH_QUERY_ROWS;
-            int limit = BATCH_QUERY_ROWS;
-            if (offset + limit > totalCount) limit = totalCount - offset;
-
-            QString sql = QString("SELECT %1 FROM %2 %3 LIMIT %4 OFFSET %5")
-                .arg(columns.join(",")).arg(tableName).arg(whereClause).arg(limit).arg(offset);
-
-            QSqlQuery query(db);
-            if (!query.exec(sql)) continue;
-
-            int rowsWrittenInBatch = 0;
-            while (query.next()) {
-                for (int col = 0; col < columns.size(); ++col) {
-                    QAxObject* cell = sheet->querySubObject("Cells(int,int)", currentRow, col + 1);
-                    cell->setProperty("Value", query.value(col));
-                    delete cell;
-                }
-                currentRow++;
-                rowsWrittenInBatch++;
-                if (rowsWrittenInBatch % BATCH_WRITE_ROWS == 0) {
-                    emit signals_exportProgress(tableIndex, totalTables, batchIndex + 1, totalBatches, sheetName);
-                    QApplication::processEvents();
-                }
-            }
-
-            emit signals_exportProgress(tableIndex, totalTables, batchIndex + 1, totalBatches, sheetName);
-            QApplication::processEvents();
-        }
-
-        qDebug() << "表" << sheetName << "导出完成";
-    }
-
-    int totalSheets = worksheets->property("Count").toInt();
-    for (int i = totalSheets; i > tableIndex; --i) {
-        QAxObject* lastSheet = worksheets->querySubObject("Item(int)", i);
-        if (lastSheet) lastSheet->dynamicCall("Delete");
-    }
-
-    workbook->dynamicCall("SaveAs(const QString&, int)", QDir::toNativeSeparators(filePath), 52);
-    workbook->dynamicCall("Close()");
-    excel->dynamicCall("Quit()");
-
-    QMessageBox::information(nullptr, "完成", QString("导出成功！\n文件位置：%1").arg(filePath));
-    emit signals_exportProgress(totalTables, totalTables, 0, 0, "完成");
+    return {0, ""};
 }

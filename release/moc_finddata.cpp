@@ -192,8 +192,8 @@ void Finddata::signals_export_all(QString _t1)
     QMetaObject::activate(this, &staticMetaObject, 1, _a);
 }
 struct qt_meta_stringdata_mMysqlThread_t {
-    QByteArrayData data[41];
-    char stringdata0[556];
+    QByteArrayData data[45];
+    char stringdata0[600];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -242,7 +242,11 @@ QT_MOC_LITERAL(36, 481, 6), // "offset"
 QT_MOC_LITERAL(37, 488, 21), // "slot_get_flowernumber"
 QT_MOC_LITERAL(38, 510, 19), // "getTotalRecordCount"
 QT_MOC_LITERAL(39, 530, 9), // "tableName"
-QT_MOC_LITERAL(40, 540, 15) // "getTableColumns"
+QT_MOC_LITERAL(40, 540, 15), // "getTableColumns"
+QT_MOC_LITERAL(41, 556, 15), // "slot_checkLogin"
+QT_MOC_LITERAL(42, 572, 18), // "QPair<int,QString>"
+QT_MOC_LITERAL(43, 591, 4), // "user"
+QT_MOC_LITERAL(44, 596, 3) // "pwd"
 
     },
     "mMysqlThread\0signals_setmodel\0\0"
@@ -260,7 +264,8 @@ QT_MOC_LITERAL(40, 540, 15) // "getTableColumns"
     "slot_Load_Data_show\0Model_ba\0mModelBa\0"
     "offset\0slot_get_flowernumber\0"
     "getTotalRecordCount\0tableName\0"
-    "getTableColumns"
+    "getTableColumns\0slot_checkLogin\0"
+    "QPair<int,QString>\0user\0pwd"
 };
 #undef QT_MOC_LITERAL
 
@@ -270,7 +275,7 @@ static const uint qt_meta_data_mMysqlThread[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-      16,   14, // methods
+      17,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -278,24 +283,25 @@ static const uint qt_meta_data_mMysqlThread[] = {
        6,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    1,   94,    2, 0x06 /* Public */,
-       5,    0,   97,    2, 0x06 /* Public */,
-       6,    1,   98,    2, 0x06 /* Public */,
-       8,    2,  101,    2, 0x06 /* Public */,
-      11,    1,  106,    2, 0x06 /* Public */,
-      14,    5,  109,    2, 0x06 /* Public */,
+       1,    1,   99,    2, 0x06 /* Public */,
+       5,    0,  102,    2, 0x06 /* Public */,
+       6,    1,  103,    2, 0x06 /* Public */,
+       8,    2,  106,    2, 0x06 /* Public */,
+      11,    1,  111,    2, 0x06 /* Public */,
+      14,    5,  114,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-      20,    4,  120,    2, 0x0a /* Public */,
-      25,    1,  129,    2, 0x0a /* Public */,
-      27,    1,  132,    2, 0x0a /* Public */,
-      29,    1,  135,    2, 0x0a /* Public */,
-      30,    1,  138,    2, 0x0a /* Public */,
-      32,    0,  141,    2, 0x0a /* Public */,
-      33,    4,  142,    2, 0x0a /* Public */,
-      37,    2,  151,    2, 0x0a /* Public */,
-      38,    2,  156,    2, 0x0a /* Public */,
-      40,    1,  161,    2, 0x0a /* Public */,
+      20,    4,  125,    2, 0x0a /* Public */,
+      25,    1,  134,    2, 0x0a /* Public */,
+      27,    1,  137,    2, 0x0a /* Public */,
+      29,    1,  140,    2, 0x0a /* Public */,
+      30,    1,  143,    2, 0x0a /* Public */,
+      32,    0,  146,    2, 0x0a /* Public */,
+      33,    4,  147,    2, 0x0a /* Public */,
+      37,    2,  156,    2, 0x0a /* Public */,
+      38,    2,  161,    2, 0x0a /* Public */,
+      40,    1,  166,    2, 0x0a /* Public */,
+      41,    2,  169,    2, 0x0a /* Public */,
 
  // signals: parameters
     QMetaType::Void, 0x80000000 | 3,    4,
@@ -316,6 +322,7 @@ static const uint qt_meta_data_mMysqlThread[] = {
     QMetaType::QStringList, QMetaType::QString, QMetaType::QString,   31,   22,
     QMetaType::Int, QMetaType::QString, QMetaType::QString,   39,   26,
     QMetaType::QStringList, QMetaType::QString,   39,
+    0x80000000 | 42, QMetaType::QString, QMetaType::QString,   43,   44,
 
        0        // eod
 };
@@ -345,6 +352,8 @@ void mMysqlThread::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id
             if (_a[0]) *reinterpret_cast< int*>(_a[0]) = std::move(_r); }  break;
         case 15: { QStringList _r = _t->getTableColumns((*reinterpret_cast< const QString(*)>(_a[1])));
             if (_a[0]) *reinterpret_cast< QStringList*>(_a[0]) = std::move(_r); }  break;
+        case 16: { QPair<int,QString> _r = _t->slot_checkLogin((*reinterpret_cast< const QString(*)>(_a[1])),(*reinterpret_cast< const QString(*)>(_a[2])));
+            if (_a[0]) *reinterpret_cast< QPair<int,QString>*>(_a[0]) = std::move(_r); }  break;
         default: ;
         }
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
@@ -448,13 +457,13 @@ int mMysqlThread::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 16)
+        if (_id < 17)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 16;
+        _id -= 17;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 16)
+        if (_id < 17)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 16;
+        _id -= 17;
     }
     return _id;
 }

@@ -9,6 +9,7 @@
 #include <QMap>
 #include <QMutex>
 #include <QProgressDialog>
+#include <QLabel>
 // 【删除】重复的 #include "finddata.h"
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -21,7 +22,6 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    void Read_Settings();
     void setWordList(const QStringList &words);
     void exportToCsvFallback(const QList<TableData>& allData, const QString& excelPath);
 private slots:
@@ -40,8 +40,6 @@ private slots:
     void slot_startExport();                   // 发起导出流程
     void slot_writeExcel(QList<TableData> allData); // 在主线程�?Excel
     void slot_updateExportProgress(int currentTable, int totalTables, int currentBatch, int totalBatches, QString sheetName); // 导出进度更新
-
-
 
 
 public slots:
@@ -76,7 +74,7 @@ private:
     QList<QueryFieldConfig> m_queryFields;   // 查询字段配置
     QMap<QString, QStringList> m_cachedTableColumns; // 表名 -> 列名缓存
     QString m_currentTabKey;                 // 当前 Tab 的表名 key
-    int m_currentTabIndex = 0;               // 当前 Tab 的索引（用于 Name_result/Name_date 等）
+    int m_currentTabIndex = 0;               // 当前 Tab 的索引
     QMap<QString, QVector<int>> m_cachedColumnWidths;  // 表名 -> 每列内容宽度缓存
     QTableView* getCurrentTableView();
     QString currentSqlModelName() const;
@@ -99,6 +97,12 @@ private:
     //辅助函数
     void enableAllControls();
     void finalizeExport(bool success, const QString &message);
+    void updateUiForPermissionLevel();
+    void showLoginDialog();
+    void logoutUser();
+    void updateUserButtonStyle();
+    void setupUserButton();
+    void loadDataForTab(const QString &tableName, bool silent = false);
 
 signals:
     void signals_Load_Data_show(Model_ba mModelBa,QString str,int limit,int offset);
@@ -106,6 +110,9 @@ signals:
   // void signals_export_all_data(QString sql);   //导出信号
     void signals_requestExportData(QString whereClause); // 请求子线程查询数�?
     void exportCompleted(bool success, QString message);    // 导出完成信号，可连接其他界面进行状态更�?
+    QPair<int, QString> signals_checkLogin(const QString &user, const QString &pwd); // 登录验证
+private:
+    int m_currentLevel = 0;   // 0=未登录, 1=操作员, 2=管理员, 3=系统管理员
 };
 #endif // MAINWINDOW_H
 

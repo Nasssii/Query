@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1444</width>
-    <height>791</height>
+    <width>921</width>
+    <height>633</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -137,19 +137,6 @@ QLabel#label {
     </item>
     <item>
      <layout class="QGridLayout" name="gridLayout_2">
-      <item row="1" column="1">
-       <spacer name="verticalSpacer_2">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>40</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
       <item row="1" column="0">
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
@@ -296,19 +283,6 @@ QLabel#label {
           <item row="10" column="1">
            <layout class="QHBoxLayout" name="horizontalLayout_2">
             <item>
-             <spacer name="horizontalSpacer_2">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item>
              <widget class="QTableWidget" name="tableWidgetSelSet">
               <property name="selectionMode">
                <enum>QAbstractItemView::SingleSelection</enum>
@@ -323,7 +297,7 @@ QLabel#label {
                <number>3</number>
               </property>
               <attribute name="horizontalHeaderVisible">
-               <bool>true</bool>
+               <bool>false</bool>
               </attribute>
               <attribute name="verticalHeaderVisible">
                <bool>false</bool>
@@ -348,24 +322,24 @@ QLabel#label {
               </column>
              </widget>
             </item>
-            <item>
-             <spacer name="horizontalSpacer_5">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
            </layout>
           </item>
          </layout>
         </item>
        </layout>
+      </item>
+      <item row="1" column="1">
+       <spacer name="verticalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
       </item>
       <item row="1" column="2">
        <layout class="QGridLayout" name="gridLayout_3">
@@ -383,21 +357,7 @@ QLabel#label {
          </spacer>
         </item>
         <item row="2" column="2">
-         <layout class="QGridLayout" name="gridLayout_4">
-          <item row="1" column="1">
-           <spacer name="verticalSpacer_4">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-         </layout>
+         <layout class="QGridLayout" name="gridLayout_4"/>
         </item>
         <item row="2" column="0">
          <widget class="QTableWidget" name="SQLTableSetitng">

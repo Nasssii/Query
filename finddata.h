@@ -103,6 +103,8 @@ public:
 
 
     QMap<QString,Model_ba> SqlModel;
+    QMap<QString,QString> m_resultFieldMap;   // 表名→结果字段名（自动探测）
+    QMap<QString,QString> m_dateFieldMap;     // 表名→日期字段名（自动探测）
 
     void InitSQL();
 
@@ -118,6 +120,7 @@ public slots:
     QStringList slot_get_flowernumber(QString tablename,QString str);
     int getTotalRecordCount(const QString &tableName, const QString &whereClause);//获取表单数据总数
     QStringList getTableColumns(const QString& tableName);//获取表列名
+    QPair<int, QString> slot_checkLogin(const QString &user, const QString &pwd);//验证登录
 
 
 signals:

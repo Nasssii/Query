@@ -1,3 +1,4 @@
+release/accountdialog.o
 release/finddata.o
 release/formsqlset.o
 release/main.o
@@ -5,6 +6,7 @@ release/mainwindow.o
 release/sqlconifg.o
 release/sqlsettingdialog.o
 release/qrc_Resource.o
+release/moc_accountdialog.o
 release/moc_finddata.o
 release/moc_formsqlset.o
 release/moc_mainwindow.o

@@ -1,0 +1,16 @@
+# 编译产物
+debug/
+release/
+*.exe
+*.o
+*.obj
+moc_*.cpp
+
+# Qt 相关
+*.pro.user
+*.pro.user.*
+
+# 其他临时文件
+nul
+*.log
+*.tmp

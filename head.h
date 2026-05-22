@@ -26,7 +26,4 @@
 extern QStringList chineseList;
 extern QStringList Assembly_cloumns;//组装数据列名
 extern QStringList Table_name;//数据库名字
-extern QStringList Name_result;//结果列名
-extern QStringList Name_date;//日期名称
-
 #endif // HEAD_H

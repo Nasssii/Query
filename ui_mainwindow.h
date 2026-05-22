@@ -32,6 +32,7 @@
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QTabWidget>
 #include <QtWidgets/QTableView>
+#include <QtWidgets/QToolButton>
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QWidget>
 
@@ -46,14 +47,15 @@ public:
     QVBoxLayout *verticalLayout;
     QFrame *frame;
     QGridLayout *gridLayout_4;
-    QSpacerItem *horizontalSpacer_3;
-    QSpacerItem *horizontalSpacer_2;
     QSpacerItem *horizontalSpacer_6;
-    QSpacerItem *horizontalSpacer_4;
-    QSpacerItem *horizontalSpacer_7;
+    QToolButton *USER;
+    QSpacerItem *horizontalSpacer_3;
     QLabel *label_10;
+    QSpacerItem *horizontalSpacer_2;
+    QSpacerItem *horizontalSpacer_7;
+    QSpacerItem *horizontalSpacer_4;
+    QWidget *widget;
     QLabel *label;
-    QPushButton *USER;
     QGroupBox *groupBox;
     QGridLayout *gridLayout_3;
     QVBoxLayout *verticalLayout_2;
@@ -110,6 +112,7 @@ public:
     QHBoxLayout *horizontalLayout_24;
     QHBoxLayout *horizontalLayout_8;
     QSpacerItem *horizontalSpacer_5;
+    QSpacerItem *horizontalSpacer_8;
     QPushButton *Btn_PageUp;
     QSpinBox *CurPage;
     QLabel *label_4;
@@ -357,35 +360,51 @@ public:
         frame->setFrameShadow(QFrame::Raised);
         gridLayout_4 = new QGridLayout(frame);
         gridLayout_4->setObjectName(QString::fromUtf8("gridLayout_4"));
-        horizontalSpacer_3 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
-
-        gridLayout_4->addItem(horizontalSpacer_3, 5, 2, 1, 1);
-
-        horizontalSpacer_2 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
-
-        gridLayout_4->addItem(horizontalSpacer_2, 5, 7, 1, 1);
-
         horizontalSpacer_6 = new QSpacerItem(30, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        gridLayout_4->addItem(horizontalSpacer_6, 5, 5, 1, 1);
+        gridLayout_4->addItem(horizontalSpacer_6, 5, 8, 1, 1);
 
-        horizontalSpacer_4 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+        USER = new QToolButton(frame);
+        USER->setObjectName(QString::fromUtf8("USER"));
+        QIcon icon;
+        icon.addFile(QString::fromUtf8(":/new/prefix1/image/user.svg"), QSize(), QIcon::Normal, QIcon::Off);
+        USER->setIcon(icon);
+        USER->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+        USER->setAutoRaise(false);
 
-        gridLayout_4->addItem(horizontalSpacer_4, 5, 4, 1, 1);
+        gridLayout_4->addWidget(USER, 5, 11, 1, 1);
 
-        horizontalSpacer_7 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+        horizontalSpacer_3 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        gridLayout_4->addItem(horizontalSpacer_7, 5, 1, 1, 1);
+        gridLayout_4->addItem(horizontalSpacer_3, 5, 3, 1, 1);
 
         label_10 = new QLabel(frame);
         label_10->setObjectName(QString::fromUtf8("label_10"));
-        label_10->setMaximumSize(QSize(260, 260));
+        label_10->setMinimumSize(QSize(0, 91));
+        label_10->setMaximumSize(QSize(260, 270));
         label_10->setStyleSheet(QString::fromUtf8("padding:0px;\n"
 "width:30px;\n"
 "hight:30px;"));
         label_10->setPixmap(QPixmap(QString::fromUtf8(":/new/prefix1/image/PINSEN.png")));
 
         gridLayout_4->addWidget(label_10, 5, 0, 1, 1);
+
+        horizontalSpacer_2 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        gridLayout_4->addItem(horizontalSpacer_2, 5, 10, 1, 1);
+
+        horizontalSpacer_7 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        gridLayout_4->addItem(horizontalSpacer_7, 5, 1, 1, 1);
+
+        horizontalSpacer_4 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        gridLayout_4->addItem(horizontalSpacer_4, 5, 7, 1, 1);
+
+        widget = new QWidget(frame);
+        widget->setObjectName(QString::fromUtf8("widget"));
+
+        gridLayout_4->addWidget(widget, 5, 5, 1, 1);
 
         label = new QLabel(frame);
         label->setObjectName(QString::fromUtf8("label"));
@@ -402,17 +421,7 @@ public:
 ""));
         label->setAlignment(Qt::AlignCenter);
 
-        gridLayout_4->addWidget(label, 5, 3, 1, 1);
-
-        USER = new QPushButton(frame);
-        USER->setObjectName(QString::fromUtf8("USER"));
-        USER->setStyleSheet(QString::fromUtf8("color:rgb(0, 0, 0);\n"
-""));
-        QIcon icon;
-        icon.addFile(QString::fromUtf8("image/user.svg"), QSize(), QIcon::Normal, QIcon::Off);
-        USER->setIcon(icon);
-
-        gridLayout_4->addWidget(USER, 5, 8, 1, 1);
+        gridLayout_4->addWidget(label, 5, 4, 1, 1);
 
 
         verticalLayout->addWidget(frame);
@@ -711,7 +720,7 @@ public:
         tableView_DJ1 = new QTableView(tab_6);
         tableView_DJ1->setObjectName(QString::fromUtf8("tableView_DJ1"));
 
-        gridLayout_9->addWidget(tableView_DJ1, 0, 2, 1, 1);
+        gridLayout_9->addWidget(tableView_DJ1, 0, 0, 1, 1);
 
         tabWidget->addTab(tab_6, QString());
 
@@ -728,10 +737,14 @@ public:
 
         horizontalLayout_8->addItem(horizontalSpacer_5);
 
+        horizontalSpacer_8 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout_8->addItem(horizontalSpacer_8);
+
         Btn_PageUp = new QPushButton(centralwidget);
         Btn_PageUp->setObjectName(QString::fromUtf8("Btn_PageUp"));
         Btn_PageUp->setMinimumSize(QSize(0, 38));
-        Btn_PageUp->setMaximumSize(QSize(16777215, 31));
+        Btn_PageUp->setMaximumSize(QSize(16777215, 16777215));
         QFont font4;
         font4.setFamily(QString::fromUtf8("Microsoft YaHei"));
         font4.setBold(true);
@@ -750,7 +763,7 @@ public:
         CurPage->setObjectName(QString::fromUtf8("CurPage"));
         CurPage->setEnabled(false);
         CurPage->setMinimumSize(QSize(0, 32));
-        CurPage->setMaximumSize(QSize(51, 31));
+        CurPage->setMaximumSize(QSize(51, 16777215));
         QFont font5;
         font5.setFamily(QString::fromUtf8("Microsoft YaHei"));
         font5.setBold(false);
@@ -779,7 +792,7 @@ public:
         CurPage_2->setObjectName(QString::fromUtf8("CurPage_2"));
         CurPage_2->setEnabled(false);
         CurPage_2->setMinimumSize(QSize(0, 32));
-        CurPage_2->setMaximumSize(QSize(51, 31));
+        CurPage_2->setMaximumSize(QSize(51, 16777215));
         CurPage_2->setFont(font5);
         CurPage_2->setFrame(true);
         CurPage_2->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
@@ -794,7 +807,7 @@ public:
         Btn_PageDown = new QPushButton(centralwidget);
         Btn_PageDown->setObjectName(QString::fromUtf8("Btn_PageDown"));
         Btn_PageDown->setMinimumSize(QSize(0, 38));
-        Btn_PageDown->setMaximumSize(QSize(16777215, 31));
+        Btn_PageDown->setMaximumSize(QSize(16777215, 16777215));
         Btn_PageDown->setFont(font4);
         QIcon icon2;
         icon2.addFile(QString::fromUtf8(":/Pictrue/next.png"), QSize(), QIcon::Normal, QIcon::Off);
@@ -870,9 +883,9 @@ public:
     {
         MainWindow->setWindowTitle(QCoreApplication::translate("MainWindow", "MainWindow", nullptr));
         actions_SQL->setText(QCoreApplication::translate("MainWindow", "\346\225\260\346\215\256\345\272\223", nullptr));
+        USER->setText(QString());
         label_10->setText(QString());
         label->setText(QCoreApplication::translate("MainWindow", "\346\225\260\346\215\256\345\272\223\346\237\245\350\257\242\350\275\257\344\273\266V1.0", nullptr));
-        USER->setText(QCoreApplication::translate("MainWindow", "USER", nullptr));
         groupBox->setTitle(QCoreApplication::translate("MainWindow", "\346\237\245\350\257\242\346\235\241\344\273\266", nullptr));
         label_2->setText(QCoreApplication::translate("MainWindow", "\351\233\266\351\203\250\344\273\266\346\235\241\347\240\201\357\274\232", nullptr));
         label_3->setText(QCoreApplication::translate("MainWindow", "\344\270\212\347\272\277\346\235\241\347\240\201\357\274\232", nullptr));
@@ -904,7 +917,7 @@ public:
         Btn_PageUp->setText(QCoreApplication::translate("MainWindow", "\344\270\212\344\270\200\351\241\265", nullptr));
         label_4->setText(QCoreApplication::translate("MainWindow", "/", nullptr));
         Btn_PageDown->setText(QCoreApplication::translate("MainWindow", "\344\270\213\344\270\200\351\241\265", nullptr));
-        label_14->setText(QCoreApplication::translate("MainWindow", "\346\257\217\351\241\265\345\255\227\346\256\265\346\225\260", nullptr));
+        label_14->setText(QCoreApplication::translate("MainWindow", "\346\257\217\351\241\265\346\230\276\347\244\272\350\241\214\346\225\260", nullptr));
         menu->setTitle(QCoreApplication::translate("MainWindow", "\350\256\276\347\275\256", nullptr));
     } // retranslateUi
 

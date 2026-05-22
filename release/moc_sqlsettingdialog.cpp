@@ -23,7 +23,7 @@ QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_SQLSettingDialog_t {
     QByteArrayData data[12];
-    char stringdata0[167];
+    char stringdata0[184];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -37,17 +37,18 @@ QT_MOC_LITERAL(1, 17, 13), // "configChanged"
 QT_MOC_LITERAL(2, 31, 0), // ""
 QT_MOC_LITERAL(3, 32, 19), // "SqlConnectionConfig"
 QT_MOC_LITERAL(4, 52, 6), // "config"
-QT_MOC_LITERAL(5, 59, 13), // "onItemChanged"
-QT_MOC_LITERAL(6, 73, 17), // "QTableWidgetItem*"
-QT_MOC_LITERAL(7, 91, 4), // "item"
-QT_MOC_LITERAL(8, 96, 19), // "onSelSetItemChanged"
-QT_MOC_LITERAL(9, 116, 17), // "deleteSelectedRow"
-QT_MOC_LITERAL(10, 134, 16), // "onConfirmClicked"
-QT_MOC_LITERAL(11, 151, 15) // "onCancelClicked"
+QT_MOC_LITERAL(5, 59, 30), // "on_SQLTableSetitng_itemChanged"
+QT_MOC_LITERAL(6, 90, 17), // "QTableWidgetItem*"
+QT_MOC_LITERAL(7, 108, 4), // "item"
+QT_MOC_LITERAL(8, 113, 19), // "onSelSetItemChanged"
+QT_MOC_LITERAL(9, 133, 17), // "deleteSelectedRow"
+QT_MOC_LITERAL(10, 151, 16), // "onConfirmClicked"
+QT_MOC_LITERAL(11, 168, 15) // "onCancelClicked"
 
     },
     "SQLSettingDialog\0configChanged\0\0"
-    "SqlConnectionConfig\0config\0onItemChanged\0"
+    "SqlConnectionConfig\0config\0"
+    "on_SQLTableSetitng_itemChanged\0"
     "QTableWidgetItem*\0item\0onSelSetItemChanged\0"
     "deleteSelectedRow\0onConfirmClicked\0"
     "onCancelClicked"
@@ -97,7 +98,7 @@ void SQLSettingDialog::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int
         Q_UNUSED(_t)
         switch (_id) {
         case 0: _t->configChanged((*reinterpret_cast< const SqlConnectionConfig(*)>(_a[1]))); break;
-        case 1: _t->onItemChanged((*reinterpret_cast< QTableWidgetItem*(*)>(_a[1]))); break;
+        case 1: _t->on_SQLTableSetitng_itemChanged((*reinterpret_cast< QTableWidgetItem*(*)>(_a[1]))); break;
         case 2: _t->onSelSetItemChanged((*reinterpret_cast< QTableWidgetItem*(*)>(_a[1]))); break;
         case 3: _t->deleteSelectedRow(); break;
         case 4: _t->onConfirmClicked(); break;

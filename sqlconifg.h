@@ -14,8 +14,6 @@ struct SqlTableConfig
 
 struct SqlConnectionConfig
 {
-    QString connectionName;   // Qt 数据库连接名
-    // QString driverName;    // 数据库驱动，例如 QMYSQL / QSQLITE
     QString hostName;         // 主机地址
     QString databaseName;     // 数据库名
     QString userName;         // 用户名

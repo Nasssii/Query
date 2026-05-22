@@ -2,6 +2,7 @@
 #define SQLSETTINGDIALOG_H
 
 #include <QDialog>
+#include <QTableWidget>
 #include <QTableWidgetItem>
 
 #include "sqlconifg.h"
@@ -14,7 +15,7 @@ class SQLSettingDialog : public QDialog
 {
     Q_OBJECT
 public:
-    explicit SQLSettingDialog(QWidget *parent = nullptr);
+    explicit SQLSettingDialog(QWidget *parent = nullptr, int permissionLevel = 1);
     ~SQLSettingDialog();
 
 signals:
@@ -22,7 +23,7 @@ signals:
     void configChanged(const SqlConnectionConfig &config);
 
 private slots:
-    void onItemChanged(QTableWidgetItem *item);
+    void on_SQLTableSetitng_itemChanged(QTableWidgetItem *item);
     void onSelSetItemChanged(QTableWidgetItem *item);
     void deleteSelectedRow();
     void onConfirmClicked();
@@ -30,11 +31,14 @@ private slots:
 
 private:
     void ensureOneEmptyRow();
+    void ensureSelSetEmptyRow();
+    static void ensureTableBottomEmptyRow(QTableWidget *table);
     void loadConfigToUi();
     bool collectConfigFromUi(SqlConnectionConfig *config);
     bool isValidName(const QString &name) const;
 
     Ui::SQLSettingDialog *ui;
+    int m_permissionLevel = 1;
 };
 
 #endif // SQLSETTINGDIALOG_H

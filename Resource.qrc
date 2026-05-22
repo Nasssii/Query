@@ -3,5 +3,8 @@
         <file>image/PINSEN.png</file>
         <file>image/HomeBg.png</file>
         <file>image/user.svg</file>
+        <file>image/eye_show.png</file>
+        <file>image/eye_close.png</file>
+        <file>image/user_operator.png</file>
     </qresource>
 </RCC>

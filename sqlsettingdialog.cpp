@@ -9,27 +9,26 @@
 #include <QTableWidget>
 #include "sqlconifg.h"
 
-SQLSettingDialog::SQLSettingDialog(QWidget *parent) :
+SQLSettingDialog::SQLSettingDialog(QWidget *parent, int permissionLevel) :
     QDialog(parent),
-    ui(new Ui::SQLSettingDialog)
+    ui(new Ui::SQLSettingDialog),
+    m_permissionLevel(permissionLevel)
 {
     ui->setupUi(this);
 
     QTableWidget *table = ui->SQLTableSetitng;
     table->setColumnCount(2);
     table->setHorizontalHeaderLabels(QStringList() << tr("前端表名") << tr("数据库表名"));
+    table->horizontalHeader()->setVisible(false);
+    table->horizontalHeader()->setDisabled(true);
 
     QShortcut *delShortcut = new QShortcut(QKeySequence::Delete, this);
     connect(delShortcut, &QShortcut::activated, this, &SQLSettingDialog::deleteSelectedRow);
-    connect(table, &QTableWidget::itemChanged, this, &SQLSettingDialog::onItemChanged);
 
     // UI 文件中的按钮名保持不变：pushButton=确认，pushButton_2=取消。
     connect(ui->pushButton, &QPushButton::clicked, this, &SQLSettingDialog::onConfirmClicked);
     connect(ui->pushButton_2, &QPushButton::clicked, this, &SQLSettingDialog::onCancelClicked);
 
-
-      ui->LInkNamelabel->setVisible(false);
-      ui->LInkName->setVisible(false);
 
     // 设置查询条件配置表
     QTableWidget *selSetTable = ui->tableWidgetSelSet;
@@ -40,6 +39,17 @@ SQLSettingDialog::SQLSettingDialog(QWidget *parent) :
 
     loadConfigToUi();
     ensureOneEmptyRow();
+
+    // 根据权限禁用控件
+    if (m_permissionLevel == 2) {
+        // 管理员：不能修改连接配置
+        ui->host->setEnabled(false);
+        ui->port->setEnabled(false);
+        ui->linkSQL->setEnabled(false);
+        ui->SQLUser->setEnabled(false);
+        ui->SQLPASSWORD->setEnabled(false);
+    }
+    // level 1(操作员) 无法进入此对话框；level 3(系统管理员) 拥有完整权限
 }
 
 SQLSettingDialog::~SQLSettingDialog()
@@ -50,12 +60,31 @@ SQLSettingDialog::~SQLSettingDialog()
 void SQLSettingDialog::ensureOneEmptyRow()
 {
     QTableWidget *table = ui->SQLTableSetitng;
-    const int rows = table->rowCount();
-    const bool needRow = rows == 0 ||
-            ((table->item(rows - 1, 0) && !table->item(rows - 1, 0)->text().trimmed().isEmpty()) ||
-             (table->item(rows - 1, 1) && !table->item(rows - 1, 1)->text().trimmed().isEmpty()));
-    if (needRow) {
-        table->insertRow(rows);
+    ensureTableBottomEmptyRow(table);
+}
+
+void SQLSettingDialog::ensureSelSetEmptyRow()
+{
+    QTableWidget *table = ui->tableWidgetSelSet;
+    // 管理员最多 3 行
+    if (m_permissionLevel == 2 && table->rowCount() >= 3)
+        return;
+    ensureTableBottomEmptyRow(table);
+}
+
+void SQLSettingDialog::ensureTableBottomEmptyRow(QTableWidget *table)
+{
+    const int last = table->rowCount() - 1;
+    if (last < 0) {
+        table->insertRow(0);
+        return;
+    }
+    for (int col = 0; col < table->columnCount(); ++col) {
+        QTableWidgetItem *item = table->item(last, col);
+        if (item && !item->text().trimmed().isEmpty()) {
+            table->insertRow(table->rowCount());
+            return;
+        }
     }
 }
 
@@ -66,7 +95,7 @@ bool SQLSettingDialog::isValidName(const QString &name) const
     return re.exactMatch(name);
 }
 
-void SQLSettingDialog::onItemChanged(QTableWidgetItem *item)
+void SQLSettingDialog::on_SQLTableSetitng_itemChanged(QTableWidgetItem *item)
 {
     if (item == nullptr || item->column() > 1) {
         return;
@@ -105,7 +134,7 @@ void SQLSettingDialog::onItemChanged(QTableWidgetItem *item)
 void SQLSettingDialog::onSelSetItemChanged(QTableWidgetItem *item)
 {
     if (item == nullptr) return;
-    // 不校验内容，允许任意字符（显示名和列名可能是中文/英文/空）
+    ensureSelSetEmptyRow();
 }
 
 void SQLSettingDialog::deleteSelectedRow()
@@ -126,7 +155,6 @@ void SQLSettingDialog::loadConfigToUi()
 {
     const SqlConnectionConfig config = SQLConifg::loadConfig();
 
-    ui->LInkName->setText(config.connectionName);
     ui->host->setText(config.hostName);
     ui->linkSQL->setText(config.databaseName);
     ui->SQLUser->setText(config.userName);
@@ -143,6 +171,7 @@ void SQLSettingDialog::loadConfigToUi()
         table->setItem(row, 1, new QTableWidgetItem(tableConfig.tableName));
     }
     table->blockSignals(false);
+    ensureOneEmptyRow();
 
     // 加载查询字段配置
     QList<QueryFieldConfig> queryFields = SQLConifg::loadQueryFields();
@@ -157,6 +186,7 @@ void SQLSettingDialog::loadConfigToUi()
         selSet->setItem(row, 2, new QTableWidgetItem(qf.lookupTable));
     }
     selSet->blockSignals(false);
+    ensureSelSetEmptyRow();
 }
 
 bool SQLSettingDialog::collectConfigFromUi(SqlConnectionConfig *config)
@@ -165,7 +195,6 @@ bool SQLSettingDialog::collectConfigFromUi(SqlConnectionConfig *config)
         return false;
     }
 
-    config->connectionName = ui->LInkName->text().trimmed();
     config->hostName = ui->host->text().trimmed();
     config->databaseName = ui->linkSQL->text().trimmed();
     config->userName = ui->SQLUser->text().trimmed();
@@ -179,10 +208,6 @@ bool SQLSettingDialog::collectConfigFromUi(SqlConnectionConfig *config)
     config->port = portValue;
     config->tables.clear();
 
-    if (config->connectionName.isEmpty() || !isValidName(config->connectionName)) {
-        QMessageBox::warning(this, tr("格式错误"), tr("连接名不能为空，且只能包含中文、字母、数字和下划线。"));
-        return false;
-    }
     if (config->hostName.isEmpty()) {
         QMessageBox::warning(this, tr("格式错误"), tr("host 不能为空。"));
         return false;

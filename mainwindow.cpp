@@ -11,13 +11,16 @@
 #include <QTableView>
 #include <QSqlRecord>
 #include <QToolButton>
+#include <QIcon>
+#include <QMenu>
+#include <QAction>
+#include <QTimer>
+#include "accountdialog.h"
 #include "sqlsettingdialog.h"
 
 QStringList chineseList;
 QStringList Assembly_cloumns;
 QStringList Table_name;//数据库名字
-QStringList Name_result;//结果列名
-QStringList Name_date;//日期名称
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -26,7 +29,15 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     this->setWindowTitle("查询系统V1.0 广州品晟汽车空调设备股份有限公司");
-    Read_Settings();
+    {   // 读取数据库连接配置
+        const SqlConnectionConfig cfg = SQLConifg::loadConfig();
+        MysqlSettings.hostName     = cfg.hostName;
+        MysqlSettings.databaseName = cfg.databaseName;
+        MysqlSettings.userName     = cfg.userName;
+        MysqlSettings.password     = cfg.password;
+        MysqlSettings.port         = QString::number(cfg.port);
+        MysqlSettings.B_MYSQL_EN   = true;
+    }
     m_finddata = new Finddata;
     QHBoxLayout *layout1 = new QHBoxLayout;
 
@@ -56,7 +67,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_finddata,&Finddata::signals_load_data,m_MysqlThread,&mMysqlThread::slot_Load_Data);
     connect(m_MysqlThread,&mMysqlThread::signals_setmodel,m_finddata,&Finddata::slots_setmodel);
     //    connect(m_finddata,&Finddata::signals_export_data,m_MysqlThread,&mMysqlThread::slot_export_data);//单表导出已删除
-    connect(m_finddata,&Finddata::signals_export_all,m_MysqlThread,&mMysqlThread::slot_exportAllBatched);  // 改为分批导出
+    //connect(m_finddata,&Finddata::signals_export_all,m_MysqlThread,&mMysqlThread::slot_exportAllBatched);  // 已废弃：旧导出路径，COM 在非主线程有风险
     connect(m_MysqlThread,&mMysqlThread::signals_exportProgress,this,&MainWindow::slot_updateExportProgress);  // 进度显示
 
 
@@ -68,17 +79,49 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(this,&MainWindow::signals_get_flowernumber,m_MysqlThread,&mMysqlThread::slot_get_flowernumber,Qt::BlockingQueuedConnection);
     connect(m_MysqlThread, &mMysqlThread::signal_totalPages, this, &MainWindow::updatePageControls);//发送signal_totalPages信号去mainwindows的updatePageControls
-//    connect(ui->CurPage, QOverload<int>::of(&QSpinBox::valueChanged), this, &MainWindow::on_Btn_Find_clicked);//页码改变自动触发
     //翻页按钮
     connect(this, &MainWindow::signals_requestExportData,m_MysqlThread, &mMysqlThread::slot_fetchDataForExport);  // 主线程请求子线程查询导出数据
     connect(m_MysqlThread, &mMysqlThread::signals_exportDataReady, this, &MainWindow::slot_writeExcel);           // 子线程数据就绪，由主线程写 Excel
     connect(ui->pushButton, &QPushButton::clicked, this, &MainWindow::on_pushButton_ExportAll_clicked);           //导出按钮响应，ExportAll_clicked
-    //重置页数
+    // 登录验证（BlockingQueuedConnection 同步等待结果）
+    connect(this, &MainWindow::signals_checkLogin,
+            m_MysqlThread, &mMysqlThread::slot_checkLogin,
+            Qt::BlockingQueuedConnection);
+    // 列数改变 → 只刷新列显示，不查库
     connect(ui->allPage, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int newColumns){
     m_pageInfoMap[m_currentTabKey].columnsPerPage = qMax(1, newColumns);
-    resetCurrentPage();
-    loadDataForCurrentPage();});
+    m_pageInfoMap[m_currentTabKey].columnPage = 1;
+    QSignalBlocker blocker(ui->CurPage);
+    ui->CurPage->setValue(1);
+    applyColumnPageToCurrentView();});
 
+    // 查询条件变更 → 200ms 防抖，失效所有 tab 缓存，只查当前 tab
+    QTimer *debounceTimer = new QTimer(this);
+    debounceTimer->setSingleShot(true);
+    connect(debounceTimer, &QTimer::timeout, this, [this]() {
+        for (auto it = m_pageInfoMap.begin(); it != m_pageInfoMap.end(); ++it)
+            it->dataLoaded = false;
+        loadDataForCurrentPage();
+        // 3s 空闲后静默刷新其他 tab
+        QTimer::singleShot(3000, this, [this]() {
+            for (auto it = m_pageInfoMap.begin(); it != m_pageInfoMap.end(); ++it) {
+                if (!it->dataLoaded)
+                    loadDataForTab(it.key(), true);
+            }
+        });
+    });
+    auto reloadOnChange = [debounceTimer]() {
+        debounceTimer->start(200);
+    };
+    connect(ui->lineEdit_SerialN, &QLineEdit::textChanged, this, reloadOnChange);
+    connect(ui->lineEdit_OnlineCode, &QLineEdit::textChanged, this, reloadOnChange);
+    connect(ui->lineEdit_ComCode, &QLineEdit::textChanged, this, reloadOnChange);
+    connect(ui->lineEdit_Condition, &QLineEdit::textChanged, this, reloadOnChange);
+    connect(ui->comboBox_Result, &QComboBox::currentTextChanged, this, reloadOnChange);
+    connect(ui->comboBox_Status, &QComboBox::currentTextChanged, this, reloadOnChange);
+    connect(ui->dateEdit_Begin, &QDateEdit::dateChanged, this, reloadOnChange);
+    connect(ui->dateEdit_End, &QDateEdit::dateChanged, this, reloadOnChange);
+    connect(ui->ChB_date, &QCheckBox::stateChanged, this, reloadOnChange);
 
 
     m_MysqlThread->InitSQL();
@@ -103,13 +146,13 @@ MainWindow::MainWindow(QWidget *parent)
 //    ui->pushButton_4->setVisible(false);
 //    ui->pushButton_5->setVisible(false);
 //    ui->pushButton_6->setVisible(false);
- ui->USER->setVisible(false);
- ui->Btn_PageDown->setVisible(true);
+  setupUserButton();
+
+  ui->Btn_PageDown->setVisible(true);
   ui->Btn_PageUp->setVisible(true);
   ui->CurPage->setVisible(true);
   ui->CurPage_2->setVisible(true);
   ui->label_4->setVisible(true);
-
 
     // 在翻页控件 label_4 ("/") 后面添加"字段组"标签
     QLabel *colGroupLabel = new QLabel("字段组", this);
@@ -122,7 +165,12 @@ MainWindow::MainWindow(QWidget *parent)
 
 void MainWindow::on_actions_SQL_triggered()
 {
-    SQLSettingDialog dlg(this);
+    // 操作员（level 1）和未登录（level 0）不可打开设置
+    if (m_currentLevel == 0 || m_currentLevel == 1) {
+        QMessageBox::information(this, "无权限", "当前用户无权限修改配置。");
+        return;
+    }
+    SQLSettingDialog dlg(this, m_currentLevel);
     connect(&dlg, &SQLSettingDialog::configChanged, this, &MainWindow::slot_sqlConfigChanged);
     dlg.exec();
 }
@@ -130,7 +178,15 @@ void MainWindow::on_actions_SQL_triggered()
 void MainWindow::slot_sqlConfigChanged(const SqlConnectionConfig &config)
 {
     Q_UNUSED(config)
-    Read_Settings();
+    {   // 重新读取数据库连接配置
+        const SqlConnectionConfig cfg = SQLConifg::loadConfig();
+        MysqlSettings.hostName     = cfg.hostName;
+        MysqlSettings.databaseName = cfg.databaseName;
+        MysqlSettings.userName     = cfg.userName;
+        MysqlSettings.password     = cfg.password;
+        MysqlSettings.port         = QString::number(cfg.port);
+        MysqlSettings.B_MYSQL_EN   = true;
+    }
     m_queryFields = SQLConifg::loadQueryFields();
     reloadSqlRuntime();
 }
@@ -273,7 +329,7 @@ void MainWindow::slots_sql_model_conn()
         layout->setContentsMargins(0, 0, 0, 0);
         QTableView *tableView = new QTableView(tabPage);
         tableView->setAlternatingRowColors(true);
-        tableView->setSortingEnabled(true);
+        tableView->setSortingEnabled(false);
         tableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         tableView->horizontalHeader()->setStretchLastSection(false);
         tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
@@ -345,29 +401,6 @@ void MainWindow::slots_sql_model_conn()
     updateQueryFieldLabels();
 }
 
-void MainWindow::Read_Settings()
-{
-    QDateTime da = QDateTime::currentDateTime();
-    QString date = da.toString("yyyyMMdd");
-    QString path = QApplication::applicationDirPath()+"/Data";
-    QDir dir(path);
-    if(!dir.exists()){
-        if(dir.mkpath(path)){
-            qDebug() << "文件夹" << path << "创建成功";
-        }else{
-            qDebug() << "文件夹" << path << "创建失败";
-        }
-    }
-    path = path+"/Settings.ini";
-    QSettings *configInread  = new QSettings(path,QSettings::IniFormat);
-    MysqlSettings.hostName = configInread->value("/Settings/hostname","").toString();
-    MysqlSettings.databaseName = configInread->value("/Settings/databaseName","").toString();
-    MysqlSettings.userName = configInread->value("/Settings/userName","").toString();
-    MysqlSettings.password = configInread->value("/Settings/password","").toString();
-    MysqlSettings.port = configInread->value("/Settings/port","3306").toString();
-    delete configInread;
-}
-
 //void MainWindow::slot_Load_Data(QString Tab_Name,QString str,int now_rows,int now_CurPage)
 //{
 ////    myModel->setTable(Tab_Name);
@@ -400,7 +433,15 @@ void MainWindow::resetCurrentPage()
 
 void MainWindow::loadDataForCurrentPage()
 {
-    {
+    loadDataForTab(m_currentTabKey, false);
+}
+
+void MainWindow::loadDataForTab(const QString &tableName, bool silent)
+{
+    if (!m_pageInfoMap.contains(tableName)) return;
+    if (m_currentLevel == 0) return;
+
+    if (!silent) {
         QMutexLocker locker(&m_exportMutex);
         if (m_bExporting) {
             QMessageBox::information(this, "提示", "正在导出数据，请稍后再试。");
@@ -408,123 +449,86 @@ void MainWindow::loadDataForCurrentPage()
         }
     }
 
-    PageInfo &pageInfo = m_pageInfoMap[m_currentTabKey];
+    if (!m_MysqlThread->SqlModel.contains(tableName)) return;
+
+    PageInfo &pageInfo = m_pageInfoMap[tableName];
     pageInfo.dataLoaded = false;
     pageInfo.dataLoading = true;
-    m_cachedColumnWidths.remove(m_currentTabKey);
+    m_cachedColumnWidths.remove(tableName);
     pageInfo.columnsPerPage = ui->allPage->value();
 
-    auto clearModel = [](QTableView* view) {
-        if (view == nullptr) {
+    auto emitModelQuery = [this, &tableName](const QString &whereClause) {
+        if (m_MysqlThread->SqlModel.contains(tableName)) {
+            int limit = ui->allPage->value();
+            int offset = 0;
+            emit signals_Load_Data_show(m_MysqlThread->SqlModel[tableName], whereClause, limit, offset);
+        }
+    };
+    // 构建 WHERE 子句
+    QString finalWhere = " where 1=1";
+
+    // 从配置读取字段名（兜底用硬编码名）
+    QString colFlowNumber = m_queryFields.value(2).columnName;
+    if (colFlowNumber.isEmpty()) colFlowNumber = "流水号";
+
+    // 精确查询（流水号/上线码/条码）优先级最高
+    if (!ui->lineEdit_SerialN->text().isEmpty()) {
+        qDebug() << "精确查询-流水号";
+        finalWhere = QString(" where %1='%2'").arg(colFlowNumber, ui->lineEdit_SerialN->text());
+    } else if (!ui->lineEdit_OnlineCode->text().isEmpty()) {
+        qDebug() << "精确查询-上线码";
+        QStringList flowernumber_list = emit signals_get_flowernumber("rfid_to_uplinecode",
+            QString(" where 上线码='%1' or 返修码='%1'").arg(ui->lineEdit_OnlineCode->text()));
+        qDebug() << flowernumber_list;
+        if (flowernumber_list.isEmpty()) {
+            if (!silent)
+                QMessageBox::question(this, "询问", "查询不到此上线码，请重新输入。");
             return;
         }
-        if (auto* m = qobject_cast<QSqlQueryModel*>(view->model())) {
-            m->setQuery("");
-            m->clear();
+        QStringList parts;
+        for (const QString &fn : flowernumber_list)
+            parts << QString("%1='%2'").arg(colFlowNumber, fn);
+        finalWhere = " where " + parts.join(" or ");
+    } else if (!ui->lineEdit_ComCode->text().isEmpty()) {
+        qDebug() << "精确查询-条码";
+        QStringList selParts;
+        for (int i = 0; i < Assembly_cloumns.count(); ++i)
+            selParts << QString("%1='%2'").arg(Assembly_cloumns.at(i), ui->lineEdit_ComCode->text());
+        QStringList flowernumber_list = emit signals_get_flowernumber("datas_linecode_a1",
+            QString(" where %1").arg(selParts.join(" or ")));
+        if (flowernumber_list.isEmpty()) {
+            if (!silent)
+                QMessageBox::question(this, "询问", "查询不到此条码，请重新输入。");
+            return;
         }
-    };
-    clearModel(getCurrentTableView());
-
-    auto emitCurrentModelQuery = [this](const QString &whereClause) {
-        const QString modelName = currentSqlModelName();
-        if (!modelName.isEmpty() && m_MysqlThread->SqlModel.contains(modelName)) {
-            int limit = ui->allPage->value();
-            int offset = 0;
-            emit signals_Load_Data_show(m_MysqlThread->SqlModel[modelName], whereClause, limit, offset);
-        }
-    };
-    if (!ui->lineEdit_Name->text().isEmpty() || ui->comboBox_Result->currentText() != "" || ui->comboBox_Status->currentText() != "" || ui->ChB_date->isChecked()) {
-        qDebug() << "模糊查询";
-        QString Str;
-        if (!ui->lineEdit_Name->text().isEmpty()) {
-            Str = Str + ui->lineEdit_Name->text() + " like '" + ui->lineEdit_Condition->text() + "'";
-        }
-        if (ui->comboBox_Result->currentText() != "" && !Name_result.isEmpty()) {
-            const QString resultName = Name_result.at(qMin(ui->tabWidget->currentIndex(), Name_result.count() - 1));
-            if (Str != "") {
-                Str = Str + " and " + resultName + "='" + ui->comboBox_Result->currentText() + "'";
-            } else {
-                Str = Str + resultName + "='" + ui->comboBox_Result->currentText() + "'";
-            }
-        }
-        if (ui->comboBox_Status->currentText() != "") {
-            if (Str != "") {
-                Str = Str + " and  模式 ='" + ui->comboBox_Status->currentText() + "'";
-            } else {
-                Str = Str + "模式 ='" + ui->comboBox_Status->currentText() + "'";
-            }
-        }
-        if (ui->ChB_date->isChecked() && !Name_date.isEmpty()) {
-            const QString dateName = Name_date.at(qMin(ui->tabWidget->currentIndex(), Name_date.count() - 1));
-            if (Str != "") {
-                Str = Str + " and " + QString("%1>'%2' and %1<'%3'").arg(dateName, ui->dateEdit_Begin->text(), ui->dateEdit_End->text());
-            } else {
-                Str = Str + QString("%1>'%2' and %1<'%3'").arg(dateName, ui->dateEdit_Begin->text(), ui->dateEdit_End->text());
-            }
-        }
-        emitCurrentModelQuery(" where " + Str);
+        QStringList parts;
+        for (const QString &fn : flowernumber_list)
+            parts << QString("%1='%2'").arg(colFlowNumber, fn);
+        finalWhere = " where " + parts.join(" or ");
     } else {
-        qDebug() << "精确查询";
-        QString Str = "1=1";
-        if (!ui->lineEdit_SerialN->text().isEmpty()) {
-            Str = QString("流水号='%1'").arg(ui->lineEdit_SerialN->text());
-        } else if (!ui->lineEdit_OnlineCode->text().isEmpty()) {
-            QStringList flowernumber_list;
-            flowernumber_list = emit signals_get_flowernumber("rfid_to_uplinecode", QString(" where 上线码='%1' or 返修码='%1'").arg(ui->lineEdit_OnlineCode->text()));
-            qDebug() << flowernumber_list;
-            if (flowernumber_list.count() == 1) {
-                Str = QString("流水号='%1'").arg(flowernumber_list.at(0));
-            } else if (flowernumber_list.count() > 1) {
-                for (int i = 0; i < flowernumber_list.count() - 1; i++) {
-                    if (i == 0) {
-                        Str = QString("流水号='%1'").arg(flowernumber_list.at(i)) + " or ";
-                    } else {
-                        Str = Str + QString("流水号='%1'").arg(flowernumber_list.at(i)) + " or ";
-                    }
-                }
-                Str = Str + QString("流水号='%1'").arg(flowernumber_list.at(flowernumber_list.count() - 1));
-            }
-        } else if (!ui->lineEdit_ComCode->text().isEmpty()) {
-            QString sel;
-            for (int i = 0; i < Assembly_cloumns.count() - 1; i++) {
-                if (i == 0) {
-                    sel = QString("%1='%2'").arg(Assembly_cloumns.at(i), ui->lineEdit_ComCode->text()) + " or ";
-                } else {
-                    sel = sel + QString("%1='%2'").arg(Assembly_cloumns.at(i), ui->lineEdit_ComCode->text()) + " or ";
-                }
-            }
-            if (!Assembly_cloumns.isEmpty()) {
-                sel = sel + QString("%1='%2'").arg(Assembly_cloumns.at(Assembly_cloumns.count() - 1), ui->lineEdit_ComCode->text());
-            }
-
-            QStringList flowernumber_list;
-            flowernumber_list = emit signals_get_flowernumber("datas_linecode_a1", QString(" where %1").arg(sel));
-            if (flowernumber_list.count() < 1) {
-                QMessageBox::question(this, "询问", QString("查询不到此条码，重新输入。"));
-                return;
-            } else if (flowernumber_list.count() == 1) {
-                Str = QString("流水号='%1'").arg(flowernumber_list.at(0));
-            } else if (flowernumber_list.count() > 1) {
-                for (int i = 0; i < flowernumber_list.count() - 1; i++) {
-                    if (i == 0) {
-                        Str = QString("流水号='%1'").arg(flowernumber_list.at(i)) + " or ";
-                    } else {
-                        Str = Str + QString("流水号='%1'").arg(flowernumber_list.at(i)) + " or ";
-                    }
-                }
-                Str = Str + QString("流水号='%1'").arg(flowernumber_list.at(flowernumber_list.count() - 1));
-            }
+        // 模糊查询
+        qDebug() << "模糊查询";
+        QStringList conditions;
+        if (!ui->lineEdit_Name->text().isEmpty())
+            conditions << QString("%1 like '%2'").arg(ui->lineEdit_Name->text(), ui->lineEdit_Condition->text());
+        if (ui->comboBox_Result->currentText() != "") {
+            QString resultField = m_MysqlThread->m_resultFieldMap.value(tableName);
+            if (!resultField.isEmpty())
+                conditions << QString("%1='%2'").arg(resultField, ui->comboBox_Result->currentText());
         }
-        qDebug() << "Str:" << Str;
-
-        const QString modelName = currentSqlModelName();
-        if (!modelName.isEmpty() && m_MysqlThread->SqlModel.contains(modelName)) {
-            int limit = ui->allPage->value();
-            int offset = 0;
-            emit signals_Load_Data_show(m_MysqlThread->SqlModel[modelName], " where " + Str, limit, offset);
+        if (ui->comboBox_Status->currentText() != "")
+            conditions << QString("模式='%1'").arg(ui->comboBox_Status->currentText());
+        if (ui->ChB_date->isChecked()) {
+            QString dateField = m_MysqlThread->m_dateFieldMap.value(tableName);
+            if (dateField.isEmpty()) dateField = "日期";
+            conditions << QString("%1>'%2' and %1<'%3'").arg(dateField, ui->dateEdit_Begin->text(), ui->dateEdit_End->text());
         }
-        qDebug() << "gogo";
+        if (!conditions.isEmpty())
+            finalWhere = " where " + conditions.join(" and ");
     }
+
+    qDebug() << "finalWhere:" << finalWhere;
+    emitModelQuery(finalWhere);
 }
 void MainWindow::on_tabWidget_currentChanged(int index)
 {
@@ -552,11 +556,146 @@ void MainWindow::on_tabWidget_currentChanged(int index)
 
 
 
+void MainWindow::setupUserButton()
+{
+    ui->USER->setVisible(true);
+    ui->USER->setIconSize(QSize(40, 40));
+    ui->USER->setText("未登录");
+    ui->USER->setFixedHeight(66);
+    m_currentLevel = 0;
+    updateUiForPermissionLevel();
+    updateUserButtonStyle();
+    connect(ui->USER, &QToolButton::clicked, this, &MainWindow::showLoginDialog);
+}
+
 bool MainWindow::canDeleteSqlTableMapping() const
 {
-    QSettings settings(SQLConifg::settingsPath(), QSettings::IniFormat);
-    const int level = settings.value("User/level", settings.value("User/permissionLevel", 3)).toInt();
-    return level != 1;
+    return m_currentLevel == 2 || m_currentLevel == 3;
+}
+
+void MainWindow::showLoginDialog()
+{
+    if (m_currentLevel > 0) {
+        QMenu menu(this);
+        QAction *switchUser = menu.addAction("切换用户");
+        QAction *logout = menu.addAction("退出登录");
+        QAction *chosen = menu.exec(QCursor::pos());
+        if (chosen == logout) {
+            logoutUser();
+            return;
+        }
+        if (chosen != switchUser) return;
+    }
+
+    AccountDialog dlg(this);
+    connect(&dlg, &AccountDialog::loginRequested, this, [&](const QString &user, const QString &pwd) {
+        auto result = emit signals_checkLogin(user, pwd);
+        if (result.first > 0) {
+            QSettings settings(SQLConifg::settingsPath(), QSettings::IniFormat);
+            settings.setValue("User/name", user);
+            settings.setValue("User/level", result.first);
+            settings.sync();
+            m_currentLevel = result.first;
+            ui->USER->setText(user);
+            updateUiForPermissionLevel();
+            updateUserButtonStyle();
+            dlg.accept();
+        } else {
+            QMessageBox::warning(this, "登录失败", "用户名或密码错误，请重新输入。");
+        }
+    });
+    dlg.exec();
+}
+
+void MainWindow::logoutUser()
+{
+    m_currentLevel = 0;
+    ui->USER->setText("未登录");
+    {
+        QSettings settings(SQLConifg::settingsPath(), QSettings::IniFormat);
+        settings.remove("User/name");
+        settings.remove("User/level");
+        settings.sync();
+    }
+    updateUserButtonStyle();
+    updateUiForPermissionLevel();
+}
+
+void MainWindow::updateUserButtonStyle()
+{
+    QString iconPath;
+    QString btnStyle;
+    QString tooltip;
+
+    switch (m_currentLevel) {
+    case 0:
+        iconPath = ":/new/prefix1/image/user.svg";
+        btnStyle = "border:none; background:transparent; color:rgb(0, 0, 0); font-size:11px; margin-right:15px;";
+        tooltip = "点击登录";
+        break;
+    case 1:
+        iconPath = ":/new/prefix1/image/user_operator.png";
+        btnStyle = "border:none; background:transparent; color:#2d8cf0; font-weight:bold; font-size:11px; margin-right:15px;";
+        tooltip = "点击切换用户";
+        break;
+    case 2:
+        iconPath = ":/new/prefix1/image/user.svg";
+        btnStyle = "border:none; background:transparent; color:#f0ad4e; font-weight:bold; font-size:11px; margin-right:15px;";
+        tooltip = "点击切换用户";
+        break;
+    case 3:
+        iconPath = ":/new/prefix1/image/user.svg";
+        btnStyle = "border:none; background:transparent; color:#d9534f; font-weight:bold; font-size:11px; margin-right:15px;";
+        tooltip = "点击切换用户";
+        break;
+    default:
+        iconPath = ":/new/prefix1/image/user.svg";
+        btnStyle = "border:none; background:transparent; color:rgb(0, 0, 0); font-size:11px; margin-right:15px;";
+        tooltip = "点击登录";
+        break;
+    }
+
+    QIcon icon(iconPath);
+    if (icon.isNull()) {
+        icon = QIcon(":/new/prefix1/image/user.svg");
+    }
+    ui->USER->setIcon(icon);
+    ui->USER->setStyleSheet(btnStyle);
+    ui->USER->setToolTip(tooltip);
+}
+
+void MainWindow::updateUiForPermissionLevel()
+{
+    // 轻量更新：只增删 tab 关闭按钮，不断数据库、不重建 tab
+    bool canClose = canDeleteSqlTableMapping();
+    QTabBar *bar = ui->tabWidget->tabBar();
+    for (int i = 0; i < ui->tabWidget->count(); ++i) {
+        QWidget *tab = ui->tabWidget->widget(i);
+        if (!m_dynamicSqlTabNames.contains(tab)) continue;
+        const QString &tableName = m_dynamicSqlTabNames[tab];
+        QWidget *btn = bar->tabButton(i, QTabBar::RightSide);
+        if (canClose && !btn) {
+            QToolButton *closeButton = new QToolButton(ui->tabWidget);
+            closeButton->setText(QStringLiteral("\u00D7"));
+            closeButton->setAutoRaise(true);
+            closeButton->setCursor(Qt::PointingHandCursor);
+            closeButton->setFixedSize(16, 16);
+            closeButton->setStyleSheet(
+                "QToolButton { border: none; border-radius: 8px; color: #666666; font-size: 12px; padding: 0px; }"
+                "QToolButton:hover { background-color: #dcdcdc; color: #222222; }"
+                "QToolButton:pressed { background-color: #c8c8c8; }");
+            connect(closeButton, &QToolButton::clicked, this, [this, tableName]() {
+                deleteSqlTableMapping(tableName);
+            });
+            bar->setTabButton(i, QTabBar::RightSide, closeButton);
+        } else if (!canClose && btn) {
+            bar->setTabButton(i, QTabBar::RightSide, nullptr);
+            delete btn;
+        }
+    }
+    // 更新按钮样式
+    updateUserButtonStyle();
+    qDebug() << "[Login] 权限已更新，当前等级:" << m_currentLevel;
 }
 
 void MainWindow::deleteSqlTableMapping(const QString &modelName)
@@ -948,14 +1087,17 @@ QString MainWindow::buildWhereClause()
         whereParts << QString("%1 like '%2'").arg(ui->lineEdit_Name->text(), ui->lineEdit_Condition->text());
     }
     if (ui->comboBox_Result->currentText() != "") {
-        whereParts << QString("%1='%2'").arg(Name_result.at(qMin(ui->tabWidget->currentIndex(), Name_result.count() - 1)),
-                                            ui->comboBox_Result->currentText());
+        QString resultField = m_MysqlThread->m_resultFieldMap.value(m_currentTabKey);
+        if (!resultField.isEmpty())
+            whereParts << QString("%1='%2'").arg(resultField, ui->comboBox_Result->currentText());
     }
     if (ui->comboBox_Status->currentText() != "") {
         whereParts << QString("模式='%1'").arg(ui->comboBox_Status->currentText());
     }
     if (ui->ChB_date->isChecked()) {
-        whereParts << QString("%1>'%2' and %1<'%3'").arg(Name_date.at(qMin(ui->tabWidget->currentIndex(), Name_date.count() - 1)),
+        QString dateField = m_MysqlThread->m_dateFieldMap.value(m_currentTabKey);
+        if (dateField.isEmpty()) dateField = "日期";
+        whereParts << QString("%1>'%2' and %1<'%3'").arg(dateField,
                                                         ui->dateEdit_Begin->text(),
                                                         ui->dateEdit_End->text());
     }
@@ -975,6 +1117,16 @@ void MainWindow::enableAllControls()
     ui->pushButton->setEnabled(true);
     ui->CurPage->setEnabled(true);
     ui->allPage->setEnabled(true);
+    ui->lineEdit_SerialN->setEnabled(true);
+    ui->lineEdit_OnlineCode->setEnabled(true);
+    ui->lineEdit_ComCode->setEnabled(true);
+    ui->lineEdit_Name->setEnabled(true);
+    ui->lineEdit_Condition->setEnabled(true);
+    ui->comboBox_Result->setEnabled(true);
+    ui->comboBox_Status->setEnabled(true);
+    ui->ChB_date->setEnabled(true);
+    ui->dateEdit_Begin->setEnabled(true);
+    ui->dateEdit_End->setEnabled(true);
 }
 //导出辅助函数
 void MainWindow::finalizeExport(bool success, const QString &message)
@@ -1007,15 +1159,23 @@ void MainWindow::slot_startExport()
     }
     m_bExporting = true;
 
-    // 禁用查询相关按钮（根据实际按钮名称调整）
-    // 假设查询按钮�?pushButton_Find，页码按钮等
-    ui->Btn_Find->setEnabled(false);   // 若存�?
+    // 禁用所有查询控件
+    ui->Btn_Find->setEnabled(false);
     ui->Btn_PageUp->setEnabled(false);
     ui->Btn_PageDown->setEnabled(false);
-    ui->pushButton->setEnabled(false);        // 导出按钮自身
+    ui->pushButton->setEnabled(false);
     ui->CurPage->setEnabled(false);
     ui->allPage->setEnabled(false);
-    // 还可以禁用输入框，根据需求决�?
+    ui->lineEdit_SerialN->setEnabled(false);
+    ui->lineEdit_OnlineCode->setEnabled(false);
+    ui->lineEdit_ComCode->setEnabled(false);
+    ui->lineEdit_Name->setEnabled(false);
+    ui->lineEdit_Condition->setEnabled(false);
+    ui->comboBox_Result->setEnabled(false);
+    ui->comboBox_Status->setEnabled(false);
+    ui->ChB_date->setEnabled(false);
+    ui->dateEdit_Begin->setEnabled(false);
+    ui->dateEdit_End->setEnabled(false);
 
     // 构建 WHERE 子句（该函数可能触发阻塞信号获取流水号，可以接受�?
     QString whereClause = buildWhereClause();
@@ -1028,7 +1188,7 @@ void MainWindow::slot_startExport()
 
     // 弹出确认对话框
     QMessageBox::StandardButton btn = QMessageBox::question(this, "确认导出",
-        QString("导出位置：D:/MysqlData/"),
+        QString("导出位置：桌面/ExportData/"),
         QMessageBox::Yes | QMessageBox::No);
     if (btn != QMessageBox::Yes) {
         m_bExporting = false;
@@ -1200,6 +1360,7 @@ void MainWindow::slot_writeExcel(QList<TableData> allData)
     }
     qDebug() << "[Export] Excel 对象创建成功";
     excel->setProperty("DisplayAlerts", false);
+    excel->setProperty("ScreenUpdating", false);
 
     // 3. 获取 Workbooks
     QAxObject* workbooks = excel->querySubObject("Workbooks");
@@ -1269,27 +1430,30 @@ void MainWindow::slot_writeExcel(QList<TableData> allData)
         sheet->setProperty("Name", data.sheetName.left(31));
 
         int colCount = data.columns.size();
+        int rowCount = data.rows.size();
 
-        // 写入标题
-        for (int col = 0; col < colCount; ++col) {
-            QAxObject* cell = sheet->querySubObject("Cells(int,int)", 1, col + 1);
-            if (cell) {
-                cell->setProperty("Value", data.columns.at(col));
-                delete cell;
-            }
-        }
+        // 构建二维 QVariant 数组，一次性写入整个 Range
+        // 第一行是标题，之后是数据行
+        QVariantList allRows;
+        allRows.reserve(1 + rowCount);
 
-        // 写入数据�?
-        for (int r = 0; r < data.rows.size(); ++r) {
-            const auto& rowData = data.rows[r];
-            for (int c = 0; c < rowData.size(); ++c) {
-                QAxObject* cell = sheet->querySubObject("Cells(int,int)", r + 2, c + 1);
-                if (cell) {
-                    cell->setProperty("Value", rowData.at(c));
-                    delete cell;
-                }
-            }
-            if (r % 500 == 0) {
+        // 标题行
+        QVariantList headerRow;
+        headerRow.reserve(colCount);
+        for (int col = 0; col < colCount; ++col)
+            headerRow << data.columns.at(col);
+        allRows << QVariant(headerRow);
+
+        // 数据行
+        for (int r = 0; r < rowCount; ++r) {
+            const auto& srcRow = data.rows[r];
+            QVariantList rowData;
+            rowData.reserve(srcRow.size());
+            for (int c = 0; c < srcRow.size(); ++c)
+                rowData << srcRow.at(c);
+            allRows << QVariant(rowData);
+
+            if (r % 5000 == 0) {
                 QApplication::processEvents();
                 if (excelProgress.wasCanceled()) {
                     writeSuccess = false;
@@ -1298,12 +1462,35 @@ void MainWindow::slot_writeExcel(QList<TableData> allData)
             }
         }
 
+        if (writeSuccess) {
+            // 计算 Range 范围："A1:XX最后行"
+            auto columnLetter = [](int col) -> QString {
+                QString result;
+                while (col > 0) {
+                    col--;
+                    result.prepend(QChar('A' + (col % 26)));
+                    col /= 26;
+                }
+                return result;
+            };
+            QString endCol = columnLetter(colCount);
+            QString endRow = QString::number(1 + rowCount);
+            QString rangeStr = QString("A1:%1%2").arg(endCol).arg(endRow);
+            QAxObject* range = sheet->querySubObject("Range(const QString&)", rangeStr);
+            if (range) {
+                range->setProperty("Value", QVariant(allRows));
+                delete range;
+            }
+        }
+
         // 自动调整列宽
-        QAxObject* usedRange = sheet->querySubObject("UsedRange");
-        if (usedRange) {
-            QAxObject* columnsRange = usedRange->querySubObject("Columns");
-            if (columnsRange) {
-                columnsRange->dynamicCall("AutoFit");
+        {
+            QAxObject* usedRange = sheet->querySubObject("UsedRange");
+            if (usedRange) {
+                QAxObject* columnsRange = usedRange->querySubObject("Columns");
+                if (columnsRange) {
+                    columnsRange->dynamicCall("AutoFit");
+                }
             }
         }
 
@@ -1323,6 +1510,7 @@ void MainWindow::slot_writeExcel(QList<TableData> allData)
         }
 
         // 保存并退出
+        excel->setProperty("ScreenUpdating", true);
         workbook->dynamicCall("SaveAs(const QString&, int)", QDir::toNativeSeparators(filePath), 52);
         workbook->dynamicCall("Close()");
         excel->dynamicCall("Quit()");
@@ -1330,6 +1518,7 @@ void MainWindow::slot_writeExcel(QList<TableData> allData)
         finalizeExport(true, QString("导出成功！\n文件位置：%1").arg(filePath));
     } else {
         // 用户取消或写入失败
+        excel->setProperty("ScreenUpdating", true);
         workbook->dynamicCall("Close()");
         excel->dynamicCall("Quit()");
         delete excel;

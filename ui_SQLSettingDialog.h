@@ -35,10 +35,8 @@ public:
     QLabel *label_2;
     QSpacerItem *horizontalSpacer_4;
     QGridLayout *gridLayout_2;
-    QSpacerItem *verticalSpacer_2;
     QVBoxLayout *verticalLayout_2;
     QGridLayout *gridLayout;
-    QTableWidget *tableWidgetSelSet;
     QLabel *labelSelSet;
     QSpacerItem *verticalSpacer;
     QGridLayout *gridLayout_5;
@@ -55,10 +53,12 @@ public:
     QLineEdit *port;
     QLabel *hostlabel;
     QLabel *labelSQLLink;
+    QHBoxLayout *horizontalLayout_2;
+    QTableWidget *tableWidgetSelSet;
+    QSpacerItem *verticalSpacer_2;
     QGridLayout *gridLayout_3;
     QSpacerItem *verticalSpacer_3;
     QGridLayout *gridLayout_4;
-    QSpacerItem *verticalSpacer_4;
     QTableWidget *SQLTableSetitng;
     QLabel *labelSetTable;
     QSpacerItem *horizontalSpacer;
@@ -69,7 +69,7 @@ public:
     {
         if (SQLSettingDialog->objectName().isEmpty())
             SQLSettingDialog->setObjectName(QString::fromUtf8("SQLSettingDialog"));
-        SQLSettingDialog->resize(1444, 791);
+        SQLSettingDialog->resize(921, 633);
         SQLSettingDialog->setMinimumSize(QSize(0, 151));
         SQLSettingDialog->setStyleSheet(QString::fromUtf8("/* ================================\n"
 "   QLabel \351\200\217\346\230\216\345\272\225\344\274\230\345\214\226\n"
@@ -153,44 +153,19 @@ public:
 
         gridLayout_2 = new QGridLayout();
         gridLayout_2->setObjectName(QString::fromUtf8("gridLayout_2"));
-        verticalSpacer_2 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
-
-        gridLayout_2->addItem(verticalSpacer_2, 1, 1, 1, 1);
-
         verticalLayout_2 = new QVBoxLayout();
         verticalLayout_2->setObjectName(QString::fromUtf8("verticalLayout_2"));
         gridLayout = new QGridLayout();
         gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
-        tableWidgetSelSet = new QTableWidget(verticalLayoutWidget);
-        if (tableWidgetSelSet->columnCount() < 3)
-            tableWidgetSelSet->setColumnCount(3);
-        QTableWidgetItem *__qtablewidgetitem = new QTableWidgetItem();
-        tableWidgetSelSet->setHorizontalHeaderItem(0, __qtablewidgetitem);
-        QTableWidgetItem *__qtablewidgetitem1 = new QTableWidgetItem();
-        tableWidgetSelSet->setHorizontalHeaderItem(1, __qtablewidgetitem1);
-        QTableWidgetItem *__qtablewidgetitem2 = new QTableWidgetItem();
-        tableWidgetSelSet->setHorizontalHeaderItem(2, __qtablewidgetitem2);
-        if (tableWidgetSelSet->rowCount() < 3)
-            tableWidgetSelSet->setRowCount(3);
-        tableWidgetSelSet->setObjectName(QString::fromUtf8("tableWidgetSelSet"));
-        tableWidgetSelSet->setSelectionMode(QAbstractItemView::SingleSelection);
-        tableWidgetSelSet->setSelectionBehavior(QAbstractItemView::SelectRows);
-        tableWidgetSelSet->setRowCount(3);
-        tableWidgetSelSet->setColumnCount(3);
-        tableWidgetSelSet->horizontalHeader()->setVisible(true);
-        tableWidgetSelSet->verticalHeader()->setVisible(false);
-
-        gridLayout->addWidget(tableWidgetSelSet, 10, 2, 1, 1);
-
         labelSelSet = new QLabel(verticalLayoutWidget);
         labelSelSet->setObjectName(QString::fromUtf8("labelSelSet"));
         labelSelSet->setMinimumSize(QSize(0, 30));
 
-        gridLayout->addWidget(labelSelSet, 9, 2, 1, 1);
+        gridLayout->addWidget(labelSelSet, 9, 1, 1, 1);
 
         verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
-        gridLayout->addItem(verticalSpacer, 8, 2, 1, 1);
+        gridLayout->addItem(verticalSpacer, 8, 1, 1, 1);
 
         gridLayout_5 = new QGridLayout();
         gridLayout_5->setObjectName(QString::fromUtf8("gridLayout_5"));
@@ -267,13 +242,43 @@ public:
         gridLayout_5->addWidget(labelSQLLink, 1, 1, 1, 1);
 
 
-        gridLayout->addLayout(gridLayout_5, 5, 2, 1, 1);
+        gridLayout->addLayout(gridLayout_5, 5, 1, 1, 1);
+
+        horizontalLayout_2 = new QHBoxLayout();
+        horizontalLayout_2->setObjectName(QString::fromUtf8("horizontalLayout_2"));
+        tableWidgetSelSet = new QTableWidget(verticalLayoutWidget);
+        if (tableWidgetSelSet->columnCount() < 3)
+            tableWidgetSelSet->setColumnCount(3);
+        QTableWidgetItem *__qtablewidgetitem = new QTableWidgetItem();
+        tableWidgetSelSet->setHorizontalHeaderItem(0, __qtablewidgetitem);
+        QTableWidgetItem *__qtablewidgetitem1 = new QTableWidgetItem();
+        tableWidgetSelSet->setHorizontalHeaderItem(1, __qtablewidgetitem1);
+        QTableWidgetItem *__qtablewidgetitem2 = new QTableWidgetItem();
+        tableWidgetSelSet->setHorizontalHeaderItem(2, __qtablewidgetitem2);
+        if (tableWidgetSelSet->rowCount() < 3)
+            tableWidgetSelSet->setRowCount(3);
+        tableWidgetSelSet->setObjectName(QString::fromUtf8("tableWidgetSelSet"));
+        tableWidgetSelSet->setSelectionMode(QAbstractItemView::SingleSelection);
+        tableWidgetSelSet->setSelectionBehavior(QAbstractItemView::SelectRows);
+        tableWidgetSelSet->setRowCount(3);
+        tableWidgetSelSet->setColumnCount(3);
+        tableWidgetSelSet->horizontalHeader()->setVisible(false);
+        tableWidgetSelSet->verticalHeader()->setVisible(false);
+
+        horizontalLayout_2->addWidget(tableWidgetSelSet);
+
+
+        gridLayout->addLayout(horizontalLayout_2, 10, 1, 1, 1);
 
 
         verticalLayout_2->addLayout(gridLayout);
 
 
         gridLayout_2->addLayout(verticalLayout_2, 1, 0, 1, 1);
+
+        verticalSpacer_2 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
+
+        gridLayout_2->addItem(verticalSpacer_2, 1, 1, 1, 1);
 
         gridLayout_3 = new QGridLayout();
         gridLayout_3->setObjectName(QString::fromUtf8("gridLayout_3"));
@@ -283,10 +288,6 @@ public:
 
         gridLayout_4 = new QGridLayout();
         gridLayout_4->setObjectName(QString::fromUtf8("gridLayout_4"));
-        verticalSpacer_4 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
-
-        gridLayout_4->addItem(verticalSpacer_4, 1, 1, 1, 1);
-
 
         gridLayout_3->addLayout(gridLayout_4, 2, 2, 1, 1);
 
@@ -340,12 +341,6 @@ public:
     {
         SQLSettingDialog->setWindowTitle(QCoreApplication::translate("SQLSettingDialog", "SQL\350\256\276\347\275\256", nullptr));
         label_2->setText(QCoreApplication::translate("SQLSettingDialog", "SQL\350\256\276\347\275\256", nullptr));
-        QTableWidgetItem *___qtablewidgetitem = tableWidgetSelSet->horizontalHeaderItem(0);
-        ___qtablewidgetitem->setText(QCoreApplication::translate("SQLSettingDialog", "\346\230\276\347\244\272\345\220\215\347\247\260", nullptr));
-        QTableWidgetItem *___qtablewidgetitem1 = tableWidgetSelSet->horizontalHeaderItem(1);
-        ___qtablewidgetitem1->setText(QCoreApplication::translate("SQLSettingDialog", "\346\225\260\346\215\256\345\272\223\345\210\227\345\220\215", nullptr));
-        QTableWidgetItem *___qtablewidgetitem2 = tableWidgetSelSet->horizontalHeaderItem(2);
-        ___qtablewidgetitem2->setText(QCoreApplication::translate("SQLSettingDialog", "\345\205\263\350\201\224\346\237\245\350\257\242\350\241\250", nullptr));
         labelSelSet->setText(QCoreApplication::translate("SQLSettingDialog", "\346\237\245\350\257\242\346\235\241\344\273\266\351\205\215\347\275\256", nullptr));
         LInkNamelabel->setText(QCoreApplication::translate("SQLSettingDialog", "\350\277\236\346\216\245\345\220\215", nullptr));
         SQLPASSWORDlabel->setText(QCoreApplication::translate("SQLSettingDialog", "\345\257\206\347\240\201", nullptr));
@@ -354,6 +349,12 @@ public:
         linkSQLlabel->setText(QCoreApplication::translate("SQLSettingDialog", "\346\225\260\346\215\256\345\272\223\345\220\215", nullptr));
         hostlabel->setText(QCoreApplication::translate("SQLSettingDialog", "host", nullptr));
         labelSQLLink->setText(QCoreApplication::translate("SQLSettingDialog", "\346\225\260\346\215\256\345\272\223\350\277\236\346\216\245", nullptr));
+        QTableWidgetItem *___qtablewidgetitem = tableWidgetSelSet->horizontalHeaderItem(0);
+        ___qtablewidgetitem->setText(QCoreApplication::translate("SQLSettingDialog", "\346\230\276\347\244\272\345\220\215\347\247\260", nullptr));
+        QTableWidgetItem *___qtablewidgetitem1 = tableWidgetSelSet->horizontalHeaderItem(1);
+        ___qtablewidgetitem1->setText(QCoreApplication::translate("SQLSettingDialog", "\346\225\260\346\215\256\345\272\223\345\210\227\345\220\215", nullptr));
+        QTableWidgetItem *___qtablewidgetitem2 = tableWidgetSelSet->horizontalHeaderItem(2);
+        ___qtablewidgetitem2->setText(QCoreApplication::translate("SQLSettingDialog", "\345\205\263\350\201\224\346\237\245\350\257\242\350\241\250", nullptr));
         QTableWidgetItem *___qtablewidgetitem3 = SQLTableSetitng->horizontalHeaderItem(0);
         ___qtablewidgetitem3->setText(QCoreApplication::translate("SQLSettingDialog", "\345\211\215\347\253\257\350\241\250\345\220\215", nullptr));
         QTableWidgetItem *___qtablewidgetitem4 = SQLTableSetitng->horizontalHeaderItem(1);
